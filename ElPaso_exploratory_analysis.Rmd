@@ -1,0 +1,247 @@
+---
+title: "El_Paso_exploratory_analysis"
+author: "Sisun Cheng"
+date: "2022/1/22"
+output: 
+  html_document:
+    toc: yes
+    toc_float: TRUE
+    code_folding: hide
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = FALSE)
+```
+
+
+```{r libraries}
+library(tidyverse)
+library(sf)
+library(lubridate)
+library(tigris)
+library(tidycensus)
+library(gganimate)
+library(viridis)
+library(riem)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RSocrata)
+library(caret)
+library(purrr)
+library(FNN)
+library(stargazer)
+library(dplyr)
+library(spatstat)
+library(raster)
+library(spdep)
+library(grid)
+library(mapview)
+library(stringr)
+
+palette5 <- c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
+palette4 <- c("#D2FBD4","#92BCAB","#527D82","#123F5A")
+palette4_2 <- c("#83c8f9","#2984c3","#075d9a","#000066")
+palette2 <- c("#6baed6","#08519c")
+
+```
+
+
+```{r load local data sources}
+# Projection CRS: ESRI 102341 (NAD_1983_HARN_StatePlane_Texas_South_FIPS_4205). 
+# Spatial unit: meter.
+CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
+  st_transform('ESRI:102341')
+
+center_line <- st_read("Data/PCI_Study/Centerline_with_Age.shp") %>%
+  st_transform('ESRI:102341')
+
+elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
+  st_transform('ESRI:102341')
+
+EPCenterline <- st_read("Data/Penn/EPCenterline.shp") %>%
+  st_transform('ESRI:102341')
+
+zoning <- st_read("Data/Penn/Zoning.shp") %>%
+  st_transform('ESRI:102341')
+
+# Saved as .csv from file 'POTHOLES2013_2021.xls'
+pot_holes <- read_csv("Data/POTHOLES2013_2021.csv")
+
+# Sheet 'Waze for Cities Data _ Key Aler' saved as .csv from file 'Waze for Cities Data _ Key Alerts Dashboard_Traffic Alerts_Table.xlsx'
+waze_data <- read_csv("Data/Waze for Cities Data3.csv")
+
+```
+
+I download the boundary data of El Paso county from [Texa Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa). 
+
+```{r boundary data of El Paso}
+texas <-
+  st_read("Data/TexasCountiesMap.geojson")
+
+El_Paso <-
+  texas %>%
+  filter(name=='El Paso') %>%
+  st_as_sf(coords = the_geom.coordinates, crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102341')
+
+```
+
+
+```{r census data}
+# census data
+# census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE)
+
+EP_census <- 
+  get_acs(geography = "tract", 
+          variables = c("B01003_001", "B19013_001", 
+                        "B02001_002", "B08013_001",
+                        "B08012_001", "B08301_001", 
+                        "B08301_010", "B01002_001"), 
+          year = 2019, 
+          state = '48',      # '48' for Texas
+          geometry = TRUE, 
+          county = '141',    # '141' for El Paso county
+          output = "wide") %>%
+  rename(Total_Pop =  B01003_001E,
+         Med_Inc = B19013_001E,
+         Med_Age = B01002_001E,
+         White_Pop = B02001_002E,
+         Travel_Time = B08013_001E,
+         Num_Commuters = B08012_001E,
+         Means_of_Transport = B08301_001E,
+         Total_Public_Trans = B08301_010E)
+
+```
+
+
+```{r process the waze data 1}
+x_fin <- data.frame()
+y_fin <- data.frame()
+
+for (i in waze_data$Location) {
+  pattern1 <- "Point(.*?) "
+  pattern2 <- " (.*?))"
+  
+  x_coor <- regmatches(i, regexec(pattern1, i))
+  x_temp <- x_coor[[1]][2] %>%
+    substr(start=2, stop=99)
+  #print(x_temp)
+  x_fin <- rbind(x_fin, x_temp)
+  y_coor <- regmatches(i, regexec(pattern2, i))
+  y_temp <- y_coor[[1]][2]
+  y_fin <- rbind(y_fin, y_temp)
+} 
+
+x_fin$x_coor <- x_fin$X..106.598471.
+y_fin$y_coor <- y_fin$X.31.911973.
+waze_data$x_coor <- x_fin$x_coor
+waze_data$y_coor <- y_fin$y_coor
+```
+
+
+```{r process waze jam data 2}
+waze_sf <-
+  waze_data %>%
+  st_as_sf(coords = c("x_coor", "y_coor"), crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102341')
+
+ggplot() +
+  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = waze_sf, colour="red", size=0.1, show.legend = "point") +
+  labs(title = "Waze jam data points",
+       subtitle = "El Paso, TX")
+
+ggplot(waze_sf, aes(y=Subtype)) + 
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "Waze jams numbers grouped by subtype",
+       subtitle = "El Paso, TX")
+```
+
+
+```{r process pot holes data}
+pot_holes_sf <-
+  pot_holes %>%
+  na.omit() %>%
+  st_as_sf(coords = c("WOXCOORDINATE", "WOYCOORDINATE"), 
+           #crs ='ESRI:102341', need to be discussed to set the correct crs for the raw data
+           agr = "constant")
+
+#ggplot() +
+#  geom_sf(data = El_Paso, fill="grey") +
+#  geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
+#  labs(title = "Pot holes",
+#       subtitle = "El Paso, TX")
+```
+
+
+```{r zoning map}
+# glimpse(zoning)
+
+ggplot() +
+  geom_sf(data = zoning, fill="grey") +
+  labs(title = "Zoning",
+       subtitle = "El Paso, TX")
+```
+
+
+```{r EP center lines}
+# glimpse(EPCenterline)
+
+ggplot() +
+  geom_sf(data = EPCenterline, aes(color = CLASS)) +
+  labs(title = "Center lines with class",
+       subtitle = "El Paso, TX")
+
+# unique(EPCenterline$CLASS)
+ggplot(EPCenterline, aes(y=CLASS)) + 
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "Pavement Center Lines by Class",
+       subtitle = "El Paso, TX")
+
+```
+
+
+```{r center_line}
+# glimpse(center_line)
+
+ggplot() +
+  geom_sf(data = center_line, aes(color = PCI_2018)) +
+  labs(title = "Center line with PCI 2018",
+       subtitle = "El Paso, TX")
+
+# unique(center_line$PCI_2018)
+ggplot(center_line, aes(y=PCI_2018)) + 
+  geom_bar(width=0.5, color="transparent", fill = "#FF6666") +
+  labs(title = "PCI distribution",
+       subtitle = "El Paso, TX")
+```
+
+
+```{r CIP_layer}
+# glimpse(CIP_layer)
+
+ggplot() +
+  geom_sf(data = CIP_layer, aes(color = PCI)) +
+  labs(title = "PCI data from CIP layer",
+       subtitle = "El Paso, TX")
+
+# unique(CIP_layer$PCI)
+# unique(CIP_layer$DISTRICT)
+
+```
+
+
+```{r elpaso_pass}
+# glimpse(elpaso_pass)
+
+ggplot() +
+  geom_sf(data = elpaso_pass, color = "red") +
+  labs(title = "elpaso_pass",
+       subtitle = "El Paso, TX")
+```
+
+
+
