@@ -50,22 +50,22 @@ palette2 <- c("#6baed6","#08519c")
 
 
 ```{r load local data sources}
-# Projection CRS: ESRI 102341 (NAD_1983_HARN_StatePlane_Texas_South_FIPS_4205). 
+# Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4205). 
 # Spatial unit: meter.
 CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 center_line <- st_read("Data/PCI_Study/Centerline_with_Age.shp") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 EPCenterline <- st_read("Data/Penn/EPCenterline.shp") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 zoning <- st_read("Data/Penn/Zoning.shp") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 # Saved as .csv from file 'POTHOLES2013_2021.xls'
 pot_holes <- read_csv("Data/POTHOLES2013_2021.csv")
@@ -85,7 +85,7 @@ El_Paso <-
   texas %>%
   filter(name=='El Paso') %>%
   st_as_sf(coords = the_geom.coordinates, crs = 4326, agr = "constant") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 ```
 
@@ -146,7 +146,7 @@ waze_data$y_coor <- y_fin$y_coor
 waze_sf <-
   waze_data %>%
   st_as_sf(coords = c("x_coor", "y_coor"), crs = 4326, agr = "constant") %>%
-  st_transform('ESRI:102341')
+  st_transform('ESRI:102339')
 
 ggplot() +
   geom_sf(data = El_Paso, fill="grey") +
@@ -162,18 +162,50 @@ ggplot(waze_sf, aes(y=Subtype)) +
 
 
 ```{r process pot holes data}
+# first attempt to try pot holes data
+# directly assigned pot_holes to crs 'ESRI:102339' and plot
+
 pot_holes_sf <-
   pot_holes %>%
+  subset(WORKORDERID!=588771) %>%
   na.omit() %>%
   st_as_sf(coords = c("WOXCOORDINATE", "WOYCOORDINATE"), 
-           #crs ='ESRI:102341', need to be discussed to set the correct crs for the raw data
+           crs ='ESRI:102339', # need to be discussed to set the correct crs for the raw data
            agr = "constant")
 
-#ggplot() +
-#  geom_sf(data = El_Paso, fill="grey") +
-#  geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
-#  labs(title = "Pot holes",
-#       subtitle = "El Paso, TX")
+ggplot() +
+  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
+  labs(title = "Pot holes",
+       subtitle = "El Paso, TX")
+```
+
+
+```{r pot holes attempt 2, fig.width=8}
+# second attempt on dealing with pot hole data
+# first convert the 'WOXCOORDINATE' and 'WOYCOORDINATE' columns to latitude and longitude format and assign the crs as 4326
+# then change the crs to 'ESRI:102339' and plot
+
+
+pot_holes$y_coor <- pot_holes$WOXCOORDINATE/10000
+pot_holes$x_coor <- pot_holes$WOYCOORDINATE/100000*(-1)
+
+pot_holes_sf <-
+  pot_holes %>%
+  subset(WORKORDERID!=588771) %>%
+  na.omit() %>%
+  st_as_sf(coords = c("x_coor", "y_coor"), 
+           crs = 4326, # need to be discussed to set the correct crs for the raw data
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+
+ggplot() +
+  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
+  labs(title = "Pot holes",
+       subtitle = "El Paso, TX")
+
 ```
 
 
