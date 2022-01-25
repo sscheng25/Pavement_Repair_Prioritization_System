@@ -1,7 +1,7 @@
 # Pavement Repair Prioritization System
 MUSA Practicum project for Pavement Repair Prioritization System in El Paso, TX.
- - Jenna Epstein
- - Kristin Chang
+ - Jenna Epstein (jennaeps@design.upenn.edu, jennaepstein93@gmail.com)
+ - Kristin Chang (krchang@design.upenn.edu, kchang089@gmail.com)
  - Sisun Cheng (sisunc@upenn.edu, sscheng25@gmail.com)
 
 ## Quick Links
