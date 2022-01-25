@@ -162,50 +162,20 @@ ggplot(waze_sf, aes(y=Subtype)) +
 
 
 ```{r process pot holes data}
-# first attempt to try pot holes data
-# directly assigned pot_holes to crs 'ESRI:102339' and plot
-
 pot_holes_sf <-
   pot_holes %>%
   subset(WORKORDERID!=588771) %>%
   na.omit() %>%
   st_as_sf(coords = c("WOXCOORDINATE", "WOYCOORDINATE"), 
-           crs ='ESRI:102339', # need to be discussed to set the correct crs for the raw data
-           agr = "constant")
-
-ggplot() +
-  geom_sf(data = El_Paso, fill="grey") +
-  geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
-  labs(title = "Pot holes",
-       subtitle = "El Paso, TX")
-```
-
-
-```{r pot holes attempt 2, fig.width=8}
-# second attempt on dealing with pot hole data
-# first convert the 'WOXCOORDINATE' and 'WOYCOORDINATE' columns to latitude and longitude format and assign the crs as 4326
-# then change the crs to 'ESRI:102339' and plot
-
-
-pot_holes$y_coor <- pot_holes$WOXCOORDINATE/10000
-pot_holes$x_coor <- pot_holes$WOYCOORDINATE/100000*(-1)
-
-pot_holes_sf <-
-  pot_holes %>%
-  subset(WORKORDERID!=588771) %>%
-  na.omit() %>%
-  st_as_sf(coords = c("x_coor", "y_coor"), 
-           crs = 4326, # need to be discussed to set the correct crs for the raw data
+           crs = 'epsg:2277', 
            agr = "constant") %>%
   st_transform('ESRI:102339')
 
-
 ggplot() +
   geom_sf(data = El_Paso, fill="grey") +
   geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
   labs(title = "Pot holes",
        subtitle = "El Paso, TX")
-
 ```
 
 
