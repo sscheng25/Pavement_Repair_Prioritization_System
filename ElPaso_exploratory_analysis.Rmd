@@ -58,6 +58,7 @@ CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
 center_line <- st_read("Data/PCI_Study/Centerline_with_Age.shp") %>%
   st_transform('ESRI:102339')
 
+#this file is too large for github, located in the gdrive
 elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
   st_transform('ESRI:102339')
 
@@ -92,29 +93,80 @@ El_Paso <-
 ```
 
 
-```{r census data}
+```{r census_demographics}
 # census data
 # census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE)
 
-EP_census <- 
+#variable list for ACS 2019 5 year data
+#ACSvar <- load_variables(year = 2019,dataset = "acs5", cache = TRUE)
+
+#loading race data by tract - use E variables for estimate values
+EP_race <- 
   get_acs(geography = "tract", 
-          variables = c("B01003_001", "B19013_001", 
-                        "B02001_002", "B08013_001",
-                        "B08012_001", "B08301_001", 
-                        "B08301_010", "B01002_001"), 
+          variables = c("B01003_001E", #total_pop
+                        "B02001_002E", #white alone
+                        "B02001_003E", #black or african american 
+                        "B02001_004E", #american indian or alaska native
+                        "B02001_005E", #asian alone
+                        "B02001_006E", #native hawaiian or pacific islander
+                        "B02001_007E", #some other race
+                        "B02001_008E"), #two or more races 
           year = 2019, 
-          state = '48',      # '48' for Texas
+          state = 48,      # 48 for Texas
           geometry = TRUE, 
-          county = '141',    # '141' for El Paso county
+          county = 141,    # 141 for El Paso county
           output = "wide") %>%
-  rename(Total_Pop =  B01003_001E,
-         Med_Inc = B19013_001E,
-         Med_Age = B01002_001E,
-         White_Pop = B02001_002E,
-         Travel_Time = B08013_001E,
-         Num_Commuters = B08012_001E,
-         Means_of_Transport = B08301_001E,
-         Total_Public_Trans = B08301_010E)
+  rename(total_pop =  B01003_001E,
+         white = B02001_002E,
+         black = B02001_003E,
+         NAT = B02001_004E,
+         asian = B02001_005E,
+         PI = B02001_006E,
+         other = B02001_007E,
+         two_plus = B02001_008E) %>%
+  dplyr::select("GEOID","NAME","total_pop","white","black","NAT","asian","PI","other","two_plus","geometry")%>% #drop MOE columns
+  mutate(pctWhite = white/total_pop*100,
+         pctBlack = black/total_pop*100,
+         pctNAT = NAT/total_pop*100,
+         pctAsian = asian/total_pop*100,
+         pctPI = PI/total_pop*100,
+         pctOther = other/total_pop*100,
+         pctTwo_plus = two_plus/total_pop*100)
+
+#loading ethnicity data by tract - use E variables for estimate values
+EP_ethnicity <-
+  get_acs(geography = "tract",
+          variables = c("B01003_001E", #total_pop
+                        "B03001_002E", #not hispanic or latino
+                        "B03001_003E"), #hispanic or latino
+          year = 2019,
+          state = 48,
+          geometry = TRUE,
+          county = 141,
+          output = "wide") %>%
+  rename(total_pop =  B01003_001E,
+         notHL = B03001_002E,
+         HL = B03001_003E) %>%
+  dplyr::select("GEOID","NAME","total_pop","notHL","HL","geometry")%>% #drop MOE columns
+  mutate(pctNotHL = notHL/total_pop*100,
+         pctHL = HL/total_pop*100)
+
+#loading age data by tract - use E variables for estimate values
+ageVar <- ACSvar%>%
+  filter(concept=="SEX BY AGE")
+
+ageVar <- as.list(ageVar$name)%>%
+  paste0("E")
+
+EP_age <-
+  get_acs(geography = "tract",
+          variables = ageVar,
+          year = 2019,
+          state = 48,
+          geometry = TRUE,
+          county = 141,
+          output = "wide")%>%
+  dplyr::select("GEOID","NAME",all_of(ageVar),"geometry") #need to aggregate &plot - coming back to this later, kristin
 
 ```
 
