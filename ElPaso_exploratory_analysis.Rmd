@@ -73,6 +73,8 @@ pot_holes <- read_csv("Data/POTHOLES2013_2021.csv")
 # Sheet 'Waze for Cities Data _ Key Aler' saved as .csv from file 'Waze for Cities Data _ Key Alerts Dashboard_Traffic Alerts_Table.xlsx'
 waze_data <- read_csv("Data/Waze for Cities Data3.csv")
 
+VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
+
 ```
 
 I download the boundary data of El Paso county from [Texa Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa). 
@@ -150,8 +152,8 @@ waze_sf <-
 
 ggplot() +
   geom_sf(data = El_Paso, fill="grey") +
-  geom_sf(data = waze_sf, colour="red", size=0.1, show.legend = "point") +
-  labs(title = "Waze jam data points",
+  geom_sf(data = waze_sf, aes(colour=Subtype), size=0.5, show.legend = "point") +
+  labs(title = "Waze jam data points by subtype",
        subtitle = "El Paso, TX")
 
 ggplot(waze_sf, aes(y=Subtype)) + 
@@ -161,7 +163,7 @@ ggplot(waze_sf, aes(y=Subtype)) +
 ```
 
 
-```{r process pot holes data}
+```{r process pot holes data to sf}
 pot_holes_sf <-
   pot_holes %>%
   subset(WORKORDERID!=588771) %>%
@@ -171,11 +173,30 @@ pot_holes_sf <-
            agr = "constant") %>%
   st_transform('ESRI:102339')
 
+```
+
+
+```{r grouping pot holes data by year}
+pot_holes_sf$YEAR <- format(mdy_hms(pot_holes_sf$ACTUALFINISHDATE), format='%Y')
+glimpse(pot_holes_sf)
+
+pot_holes_sf <-
+  pot_holes_sf %>%
+  subset(YEAR != 1900)
+
+pot_holes_sf$YEAR[pot_holes_sf$YEAR == 2106] <- 2016
+
 ggplot() +
-  geom_sf(data = El_Paso, fill="grey") +
-  geom_sf(data = pot_holes_sf, colour="red", size=0.1, show.legend = "point") +
+  # geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = pot_holes_sf, aes(colour=YEAR), size=0.5, show.legend = "point") +
   labs(title = "Pot holes",
        subtitle = "El Paso, TX")
+
+ggplot(pot_holes_sf, aes(y=YEAR)) + 
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "Year of pot holes repairment",
+       subtitle = "El Paso, TX")
+
 ```
 
 
@@ -190,7 +211,11 @@ ggplot() +
 
 
 ```{r EP center lines}
-# glimpse(EPCenterline)
+# delete duplicated "LOCAL" class first
+# unique(EPCenterline$CLASS)
+
+EPCenterline$CLASS[EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n"] <- "LOCAL"
+unique(EPCenterline$CLASS)
 
 ggplot() +
   geom_sf(data = EPCenterline, aes(color = CLASS)) +
@@ -243,7 +268,32 @@ ggplot() +
   geom_sf(data = elpaso_pass, color = "red") +
   labs(title = "elpaso_pass",
        subtitle = "El Paso, TX")
+
+ggplot(elpaso_pass, aes(y=pci_2018)) + 
+  geom_bar(width=0.5, color="transparent", fill = "#FF6666") +
+  labs(title = "PCI distribution of Elpaso_pass",
+       subtitle = "El Paso, TX")
 ```
 
+
+```{r VMT data}
+census_geom <-
+  EP_census %>%
+  subset(select = c("GEOID","geometry"))
+
+# VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
+
+VMT$GEOID <- substr(VMT$FIPS, 1, 11)
+
+VMT_sf <-
+  census_geom %>%
+  right_join(VMT, by="GEOID") 
+
+ggplot() +
+  geom_sf(data = VMT_sf, aes(fill = count)) +
+  labs(title = "VMT",
+       subtitle = "El Paso, TX")
+  
+```
 
 
