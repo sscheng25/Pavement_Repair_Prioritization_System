@@ -49,17 +49,13 @@ palette2 <- c("#6baed6","#08519c")
 ```
 
 
-```{r load local data sources}
+```{r load data sources in github repo, warning=FALSE}
 # Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4205). 
 # Spatial unit: meter.
 CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
   st_transform('ESRI:102339')
 
 center_line <- st_read("Data/PCI_Study/Centerline_with_Age.shp") %>%
-  st_transform('ESRI:102339')
-
-#this file is too large for github, located in the gdrive
-elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
   st_transform('ESRI:102339')
 
 EPCenterline <- st_read("Data/Penn/EPCenterline.shp") %>%
@@ -77,8 +73,24 @@ waze_data <- read_csv("Data/Waze for Cities Data3.csv")
 VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
 
 ```
+The "el_paso_pass2" shapefile is too large for our GitHub repository, so load read in the file locally (download from our Google Drive). Only run one of the three code chunks below assigned to your name.
+```{r load el_paso_pass2 data from local computer file path - SISUN}
+elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
+  st_transform('ESRI:102339')
 
-I download the boundary data of El Paso county from [Texa Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa). 
+```
+
+```{r load el_paso_pass2 data from local computer file path - JENNA}
+#JENNA - local file path
+elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
+  st_transform('ESRI:102339')
+```
+
+```{r load el_paso_pass2 data from local computer file path - KRISTIN}
+# KRISTIN - add your local path here
+```
+
+Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa). 
 
 ```{r boundary data of El Paso}
 texas <-
@@ -91,14 +103,26 @@ El_Paso <-
   st_transform('ESRI:102339')
 
 ```
+
 ## El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
+
+```{r census_api_key_SISUN}
+ #census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE) 
+```
+
+```{r census_api_key_JENNA}
+census_api_key("41e1c0d912341017fa6f36a5da061d3b23de335e", overwrite = TRUE) 
+```
+
+```{r census_api_key_KRISTIN}
+census_api_key("", overwrite=TRUE)
+```
 
 ```{r census_demographics}
 # census data
-# census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE)
 
 #variable list for ACS 2019 5 year data
-#ACSvar <- load_variables(year = 2019,dataset = "acs5", cache = TRUE)
+ACSvar <- load_variables(year = 2019, dataset = "acs5", cache = TRUE)
 
 #loading race data by tract - use E variables for estimate values
 EP_race <- 
@@ -150,10 +174,15 @@ EP_ethnicity <-
   dplyr::select("GEOID","NAME","total_pop","notHL","HL","geometry")%>% #drop MOE columns
   mutate(pctNotHL = notHL/total_pop*100,
          pctHL = HL/total_pop*100)
+```
 
+
+```{r census_demographics_age}
 #loading age data by tract - use E variables for estimate values
-ageVar <- ACSvar%>%
+ageVar <- ACSvar %>%
   filter(concept=="SEX BY AGE")
+
+ageVar <- ageVar %>% dplyr::select(name)
 
 ageVar <- as.list(ageVar$name)%>%
   paste0("E")
@@ -169,6 +198,64 @@ EP_age <-
   dplyr::select("GEOID","NAME",all_of(ageVar),"geometry") #need to aggregate &plot - is there a fast way to do this without having to list and add each variable together?, kristin.
 
 ```
+```{r census_age_var_labels}
+
+ageVarLabels <- ACSvar %>%
+  filter(concept=="SEX BY AGE")
+
+ageVarLabels <- ageVarLabels %>% dplyr::select(name,label)
+
+ageVarLabels$name <- ageVarLabels$name %>%
+  paste0("E")
+
+ageVarLabels$label <-gsub("!!", "", as.character(ageVarLabels$label))
+ageVarLabels$label <-gsub("Estimate", "", as.character(ageVarLabels$label))
+ageVarLabels$label <-gsub(":", "_", as.character(ageVarLabels$label))
+
+
+ageVarLabels <- ageVarLabels %>% dplyr::rename(VAR_NAME = name)
+ageVarLabels <- ageVarLabels %>% dplyr::rename(LABEL = label)
+
+
+#transposing, in case it is needed
+#ageVarLabels_new <- ageVarLabels %>%
+#  pivot_longer(!VAR_NAME, names_to = "col1", values_to = "col2") %>% 
+#  pivot_wider(names_from = "VAR_NAME", values_from = "col2")
+
+```
+
+
+```{r}
+#renaming by matching - test
+#names(EP_age) <- ageVarLabels$LABEL[match(names(EP_age), ageVarLabels$VAR_NAME)]
+```
+
+```{r census_age_var_rename_match}
+EP_age_new <- EP_age %>%
+      rename_at(as.vector(na.omit(ageVarLabels$VAR_NAME[match(names(EP_age), ageVarLabels$VAR_NAME)])), 
+               ~as.vector(na.omit(ageVarLabels$LABEL[match(names(EP_age), ageVarLabels$VAR_NAME)])))
+```
+
+```{r census_demo_age_charts}
+# transform data to long
+EP_age_long <- EP_age_new%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+# new column for sex
+EP_age_long <- EP_age_long %>%
+  dplyr::mutate(Sex= 
+                  case_when(
+                    str_detect(EP_age_long$variable, "Male") ~ "Male",
+                    str_detect(EP_age_long$variable, "Female") ~ "Female",
+                        TRUE ~ "Total"))
+
+EP_age_long_nototal<-EP_age_long[!(EP_age_long$Sex=="Total" | EP_age_long$variable=="Total_Male_" | EP_age_long$variable=="Total_Female_"),]
+
+
+ggplot(EP_age_long_nototal, aes(x = value, y = variable, fill = Sex)) + 
+  geom_col()
+```
+
 ```{r census_demo_maps}
 #plotting census demographics data
 #race map
@@ -188,17 +275,67 @@ for(i in race_vars){
       labs(title=i) 
       }
 
-do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract", bottom = "Figure 3"))
+do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract", bottom = "Figure #"))
 
 ```
+
 ```{r census_demo_maps2}
-#ethnicity map
+#ethnicity map - Hispanic or Latino
 ggplot()+
   geom_sf(data=EP_ethnicity, aes(fill=pctHL))+
   scale_fill_viridis()+
   labs(title="%Hispanic or Latino",
        subtitle="El Paso, TX 2019")
 ```
+## El Paso Socioeconomics (data from 2019 5yr ACS)
+```{r}
+
+EP_econ <- 
+  get_acs(geography = "tract", 
+          variables = c("B19013_001E", #median household income
+                        "B25058_001E", #median rent
+                        "B08301_001E", #people who have means of transportation to work
+                        "B01003_001E"), #total pop 
+          year = 2019, 
+          state = 48,      # 48 for Texas
+          geometry = TRUE, 
+          county = 141,    # 141 for El Paso county
+          output = "wide") %>%
+  rename(total_pop =  B01003_001E,
+         med_hh_income = B19013_001E,
+         med_rent = B25058_001E,
+         transport_to_work = B08301_001E) %>%
+  dplyr::select("GEOID","NAME","total_pop","med_hh_income","med_rent","transport_to_work","geometry")%>% #drop MOE columns
+  mutate(pct_transport_to_work = (ifelse(total_pop > 0, transport_to_work / total_pop,0))*100)
+```
+```{r census_socioecon_maps}
+econ_long <- EP_econ%>%
+  dplyr::select(GEOID,NAME, med_hh_income, med_rent, pct_transport_to_work)%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+econ_vars <- unique(econ_long$variable)
+mapList_econ <- list()
+
+for(i in econ_vars){
+  mapList_econ[[i]] <- 
+    ggplot() +
+      geom_sf(data = filter(econ_long, variable == i), aes(fill=value), colour=NA) +
+      scale_fill_viridis(name="") +
+      labs(title=i) 
+      }
+
+do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Select Socioeconomics by Census Tract", bottom = "Figure #"))
+```
+```{r}
+#pct transport to work map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=pct_transport_to_work))+
+  scale_fill_viridis()+
+  labs(title="% with Transportation to Work",
+       subtitle="El Paso, TX 2019")
+```
+
+
 
 ```{r process the waze data 1}
 x_fin <- data.frame()
