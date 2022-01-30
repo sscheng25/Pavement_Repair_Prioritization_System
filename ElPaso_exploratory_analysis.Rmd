@@ -91,7 +91,7 @@ El_Paso <-
   st_transform('ESRI:102339')
 
 ```
-
+## El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
 ```{r census_demographics}
 # census data
@@ -166,10 +166,39 @@ EP_age <-
           geometry = TRUE,
           county = 141,
           output = "wide")%>%
-  dplyr::select("GEOID","NAME",all_of(ageVar),"geometry") #need to aggregate &plot - coming back to this later, kristin
+  dplyr::select("GEOID","NAME",all_of(ageVar),"geometry") #need to aggregate &plot - is there a fast way to do this without having to list and add each variable together?, kristin.
 
 ```
+```{r census_demo_maps}
+#plotting census demographics data
+#race map
 
+race_long <- EP_race%>%
+  dplyr::select(GEOID,NAME, pctWhite, pctBlack, pctNAT, pctAsian, pctPI, pctOther, pctTwo_plus)%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+race_vars <- unique(race_long$variable)
+mapList <- list()
+
+for(i in race_vars){
+  mapList[[i]] <- 
+    ggplot() +
+      geom_sf(data = filter(race_long, variable == i), aes(fill=value), colour=NA) +
+      scale_fill_viridis(name="") +
+      labs(title=i) 
+      }
+
+do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract", bottom = "Figure 3"))
+
+```
+```{r census_demo_maps2}
+#ethnicity map
+ggplot()+
+  geom_sf(data=EP_ethnicity, aes(fill=pctHL))+
+  scale_fill_viridis()+
+  labs(title="%Hispanic or Latino",
+       subtitle="El Paso, TX 2019")
+```
 
 ```{r process the waze data 1}
 x_fin <- data.frame()
@@ -348,4 +377,14 @@ ggplot() +
   
 ```
 
+```{r tl_roads_data}
+#comparing TIGER/Line shapefile to the street centerlines shapefile from Alex
+tl_roads <- st_read("Data/tl_2018_roads/tl_2018_48141_roads.shp") %>%
+  st_transform('ESRI:102339')
+
+ggplot(tl_roads, aes(y=RTTYP)) + 
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "El Paso,TX Roads by RouteType",
+       subtitle = "TIGER/Line 2018")
+```
 
