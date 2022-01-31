@@ -47,6 +47,47 @@ palette4_2 <- c("#83c8f9","#2984c3","#075d9a","#000066")
 palette2 <- c("#6baed6","#08519c")
 
 ```
+```{r add plot and map themes for default visualizations}
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.text.x = element_text(size = 14))
+}
+
+plotTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle = element_text(face="italic"),
+    plot.caption = element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line("grey80", size = 0.1),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.background = element_rect(fill = "grey80", color = "white"),
+    strip.text = element_text(size=12),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10),
+    plot.background = element_blank(),
+    legend.background = element_blank(),
+    legend.title = element_text(colour = "black", face = "italic"),
+    legend.text = element_text(colour = "black", face = "italic"),
+    strip.text.x = element_text(size = 14)
+  )
+}
+
+```
 
 
 ```{r load data sources in github repo, warning=FALSE}
@@ -195,11 +236,10 @@ EP_age <-
           geometry = TRUE,
           county = 141,
           output = "wide")%>%
-  dplyr::select("GEOID","NAME",all_of(ageVar),"geometry") #need to aggregate &plot - is there a fast way to do this without having to list and add each variable together?, kristin.
+  dplyr::select("GEOID","NAME",all_of(ageVar),"geometry")
 
 ```
 ```{r census_age_var_labels}
-
 ageVarLabels <- ACSvar %>%
   filter(concept=="SEX BY AGE")
 
@@ -217,18 +257,17 @@ ageVarLabels <- ageVarLabels %>% dplyr::rename(VAR_NAME = name)
 ageVarLabels <- ageVarLabels %>% dplyr::rename(LABEL = label)
 
 
+# COMMENTING OUT BELOW TESTING (JENNA)
 #transposing, in case it is needed
 #ageVarLabels_new <- ageVarLabels %>%
 #  pivot_longer(!VAR_NAME, names_to = "col1", values_to = "col2") %>% 
 #  pivot_wider(names_from = "VAR_NAME", values_from = "col2")
 
-```
-
-
-```{r}
 #renaming by matching - test
 #names(EP_age) <- ageVarLabels$LABEL[match(names(EP_age), ageVarLabels$VAR_NAME)]
+
 ```
+
 
 ```{r census_age_var_rename_match}
 EP_age_new <- EP_age %>%
@@ -253,7 +292,7 @@ EP_age_long_nototal<-EP_age_long[!(EP_age_long$Sex=="Total" | EP_age_long$variab
 
 
 ggplot(EP_age_long_nototal, aes(x = value, y = variable, fill = Sex)) + 
-  geom_col()
+  geom_col() + plotTheme()
 ```
 
 ```{r census_demo_maps}
@@ -272,10 +311,10 @@ for(i in race_vars){
     ggplot() +
       geom_sf(data = filter(race_long, variable == i), aes(fill=value), colour=NA) +
       scale_fill_viridis(name="") +
-      labs(title=i) 
-      }
+      labs(title=i) +
+      mapTheme()}
 
-do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract", bottom = "Figure #"))
+do.call(grid.arrange,c(mapList, ncol = 4, top = "Race by Census Tract"))
 
 ```
 
@@ -284,8 +323,10 @@ do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract", bottom =
 ggplot()+
   geom_sf(data=EP_ethnicity, aes(fill=pctHL))+
   scale_fill_viridis()+
-  labs(title="%Hispanic or Latino",
-       subtitle="El Paso, TX 2019")
+  labs(title="Percent Hispanic or Latino in 2019",
+       subtitle="Census Tracts in El Paso, TX",
+       caption = "Source: US Census, ACS 2019") + mapTheme()
+
 ```
 ## El Paso Socioeconomics (data from 2019 5yr ACS)
 ```{r}
@@ -321,20 +362,36 @@ for(i in econ_vars){
     ggplot() +
       geom_sf(data = filter(econ_long, variable == i), aes(fill=value), colour=NA) +
       scale_fill_viridis(name="") +
-      labs(title=i) 
+      labs(title=i) + mapTheme()
       }
 
-do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Select Socioeconomics by Census Tract", bottom = "Figure #"))
+do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Select Socioeconomics by Census Tract", bottom = "Source: US Census, ACS 2019"))
 ```
-```{r}
+```{r census_socioecon_transport_map}
 #pct transport to work map
 ggplot()+
   geom_sf(data=EP_econ, aes(fill=pct_transport_to_work))+
   scale_fill_viridis()+
-  labs(title="% with Transportation to Work",
-       subtitle="El Paso, TX 2019")
+  labs(title="Percent Population with Transportation to Work in 2019",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
+```{r census_socioecon_medhhinc_map}
+#median household inc map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=med_hh_income))+
+  scale_fill_viridis()+
+  labs(title="Median Household Income 2019",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
 ```
 
+```{r census_socioecon_medrent_map}
+#median rent map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=med_rent))+
+  scale_fill_viridis()+
+  labs(title="Median Rent ($) 2019",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
 
 
 ```{r process the waze data 1}
@@ -372,12 +429,12 @@ ggplot() +
   geom_sf(data = El_Paso, fill="grey") +
   geom_sf(data = waze_sf, aes(colour=Subtype), size=0.5, show.legend = "point") +
   labs(title = "Waze jam data points by subtype",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + mapTheme()
 
 ggplot(waze_sf, aes(y=Subtype)) + 
   geom_bar(width=0.5, color="black", fill = "#FF6666") +
   labs(title = "Waze jams numbers grouped by subtype",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + plotTheme()
 ```
 
 
@@ -408,12 +465,12 @@ ggplot() +
   # geom_sf(data = El_Paso, fill="grey") +
   geom_sf(data = pot_holes_sf, aes(colour=YEAR), size=0.5, show.legend = "point") +
   labs(title = "Pot holes",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + mapTheme()
 
 ggplot(pot_holes_sf, aes(y=YEAR)) + 
   geom_bar(width=0.5, color="black", fill = "#FF6666") +
   labs(title = "Year of pot holes repairment",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + plotTheme()
 
 ```
 
@@ -424,7 +481,7 @@ ggplot(pot_holes_sf, aes(y=YEAR)) +
 ggplot() +
   geom_sf(data = zoning, fill="grey") +
   labs(title = "Zoning",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + mapTheme()
 ```
 
 
@@ -438,13 +495,13 @@ unique(EPCenterline$CLASS)
 ggplot() +
   geom_sf(data = EPCenterline, aes(color = CLASS)) +
   labs(title = "Center lines with class",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + mapTheme()
 
 # unique(EPCenterline$CLASS)
 ggplot(EPCenterline, aes(y=CLASS)) + 
   geom_bar(width=0.5, color="black", fill = "#FF6666") +
   labs(title = "Pavement Center Lines by Class",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") + plotTheme()
 
 ```
 
@@ -454,14 +511,15 @@ ggplot(EPCenterline, aes(y=CLASS)) +
 
 ggplot() +
   geom_sf(data = center_line, aes(color = PCI_2018)) +
-  labs(title = "Center line with PCI 2018",
-       subtitle = "El Paso, TX")
+  scale_color_viridis(direction=-1)+
+  labs(title = "Street Centerlines with PCI 2018",
+       subtitle = "El Paso, TX") + mapTheme()
 
 # unique(center_line$PCI_2018)
 ggplot(center_line, aes(y=PCI_2018)) + 
   geom_bar(width=0.5, color="transparent", fill = "#FF6666") +
-  labs(title = "PCI distribution",
-       subtitle = "El Paso, TX")
+  labs(title = "PCI Distribution",
+       subtitle = "El Paso, TX") + plotTheme()
 ```
 
 
