@@ -123,8 +123,8 @@ elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
 
 ```{r load el_paso_pass2 data from local computer file path - JENNA}
 #JENNA - local file path
-elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
-  st_transform('ESRI:102339')
+#elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
+#  st_transform('ESRI:102339')
 ```
 
 ```{r load el_paso_pass2 data from local computer file path - KRISTIN}
@@ -133,7 +133,7 @@ elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
 
 Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa). 
 
-```{r boundary data of El Paso}
+```{r boundary data of El Paso county and city}
 texas <-
   st_read("Data/TexasCountiesMap.geojson")
 
@@ -143,12 +143,21 @@ El_Paso <-
   st_as_sf(coords = the_geom.coordinates, crs = 4326, agr = "constant") %>%
   st_transform('ESRI:102339')
 
+El_Paso_city <-
+  st_read("Data/TxDOT_City_Boundaries.geojson") %>%
+  filter(CITY_NM=='El Paso') %>%
+  st_transform('ESRI:102339')
+
+#ggplot() +
+#  geom_sf(data = El_Paso_city, fill="grey") +
+#  mapTheme()
+
 ```
 
 ## El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
 ```{r census_api_key_SISUN}
- #census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE) 
+ census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE) 
 ```
 
 ```{r census_api_key_JENNA}
@@ -426,13 +435,13 @@ waze_sf <-
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = El_Paso_city, fill="grey") +
   geom_sf(data = waze_sf, aes(colour=Subtype), size=0.5, show.legend = "point") +
   labs(title = "Waze jam data points by subtype",
        subtitle = "El Paso, TX") + mapTheme()
 
 ggplot(waze_sf, aes(y=Subtype)) + 
-  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  geom_bar(width=0.5, color="transparent", fill = "#FF6666") +
   labs(title = "Waze jams numbers grouped by subtype",
        subtitle = "El Paso, TX") + plotTheme()
 ```
@@ -462,7 +471,7 @@ pot_holes_sf <-
 pot_holes_sf$YEAR[pot_holes_sf$YEAR == 2106] <- 2016
 
 ggplot() +
-  # geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = El_Paso_city, fill="grey") +
   geom_sf(data = pot_holes_sf, aes(colour=YEAR), size=0.5, show.legend = "point") +
   labs(title = "Pot holes",
        subtitle = "El Paso, TX") + mapTheme()
