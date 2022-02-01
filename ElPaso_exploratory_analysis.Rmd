@@ -335,19 +335,19 @@ EP_econ <-
   get_acs(geography = "tract", 
           variables = c("B19013_001E", #median household income
                         "B25058_001E", #median rent
-                        "B08301_001E", #people who have means of transportation to work
-                        "B01003_001E"), #total pop 
+                        "B08301_002E", #people with transpo to work and take car/van/truck
+                        "B08301_001E"), #total pop - means of transportation estimate
           year = 2019, 
           state = 48,      # 48 for Texas
           geometry = TRUE, 
           county = 141,    # 141 for El Paso county
           output = "wide") %>%
-  rename(total_pop =  B01003_001E,
+  rename(total_pop_transport =  B08301_001E,
          med_hh_income = B19013_001E,
          med_rent = B25058_001E,
-         transport_to_work = B08301_001E) %>%
-  dplyr::select("GEOID","NAME","total_pop","med_hh_income","med_rent","transport_to_work","geometry")%>% #drop MOE columns
-  mutate(pct_transport_to_work = (ifelse(total_pop > 0, transport_to_work / total_pop,0))*100)
+         transport_to_work = B08301_002E) %>%
+  dplyr::select("GEOID","NAME","total_pop_transport","med_hh_income","med_rent","transport_to_work","geometry")%>% #drop MOE columns
+  mutate(pct_transport_to_work = (ifelse(total_pop_transport > 0, transport_to_work / total_pop_transport,0))*100)
 ```
 ```{r census_socioecon_maps}
 econ_long <- EP_econ%>%
@@ -372,7 +372,7 @@ do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Select Socioeconomics by C
 ggplot()+
   geom_sf(data=EP_econ, aes(fill=pct_transport_to_work))+
   scale_fill_viridis()+
-  labs(title="Percent Population with Transportation to Work in 2019",
+  labs(title="Percent Population with Car/Van/Truck \nTransportation to Work in 2019",
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
 ```
 ```{r census_socioecon_medhhinc_map}
@@ -426,7 +426,7 @@ waze_sf <-
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = El_Paso, color="grey") +
   geom_sf(data = waze_sf, aes(colour=Subtype), size=0.5, show.legend = "point") +
   labs(title = "Waze jam data points by subtype",
        subtitle = "El Paso, TX") + mapTheme()
@@ -461,15 +461,25 @@ pot_holes_sf <-
 
 pot_holes_sf$YEAR[pot_holes_sf$YEAR == 2106] <- 2016
 
+# new sf with last five years of points data only for easier legibility on maps
+pot_holes_sf_last5yrs <- pot_holes_sf %>% dplyr::filter(YEAR > 2016)
+
+# last five years map
 ggplot() +
-  # geom_sf(data = El_Paso, fill="grey") +
-  geom_sf(data = pot_holes_sf, aes(colour=YEAR), size=0.5, show.legend = "point") +
-  labs(title = "Pot holes",
+  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = pot_holes_sf_last5yrs, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  labs(title = "Potholes 2016-2021",
+       subtitle = "El Paso, TX") + mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso, fill="grey") +
+  geom_sf(data = pot_holes_sf, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  labs(title = "Potholes",
        subtitle = "El Paso, TX") + mapTheme()
 
 ggplot(pot_holes_sf, aes(y=YEAR)) + 
   geom_bar(width=0.5, color="black", fill = "#FF6666") +
-  labs(title = "Year of pot holes repairment",
+  labs(title = "Year of potholes repairment",
        subtitle = "El Paso, TX") + plotTheme()
 
 ```
