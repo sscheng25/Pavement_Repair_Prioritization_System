@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = F
 ```
 
 
-```{r libraries}
+```{r libraries, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(sf)
 library(lubridate)
@@ -47,7 +47,7 @@ palette4_2 <- c("#83c8f9","#2984c3","#075d9a","#000066")
 palette2 <- c("#6baed6","#08519c")
 
 ```
-```{r add plot and map themes for default visualizations}
+```{r add plot and map themes for default visualizations, message=FALSE, warning=FALSE}
 mapTheme <- function(base_size = 12) {
   theme(
     text = element_text( color = "black"),
@@ -144,11 +144,17 @@ El_Paso <-
   st_transform('ESRI:102339')
 
 ```
+```{r read in el paso city boundary}
+El_Paso_city <-
+  st_read("Data/TxDOT_City_Boundaries.geojson") %>%
+  filter(CITY_NM=='El Paso') %>%
+  st_transform('ESRI:102339')
+```
 
 ## El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
 ```{r census_api_key_SISUN}
- #census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE) 
+census_api_key("e79f3706b6d61249968c6ce88794f6f556e5bf3d", overwrite = TRUE) 
 ```
 
 ```{r census_api_key_JENNA}
@@ -426,7 +432,7 @@ waze_sf <-
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = El_Paso, color="grey") +
+  geom_sf(data = El_Paso_city, color="grey") +
   geom_sf(data = waze_sf, aes(colour=Subtype), size=0.5, show.legend = "point") +
   labs(title = "Waze jam data points by subtype",
        subtitle = "El Paso, TX") + mapTheme()
@@ -459,22 +465,45 @@ pot_holes_sf <-
   pot_holes_sf %>%
   subset(YEAR != 1900)
 
+# Clip to el paso city boundary
+pot_holes_sf <- 
+  pot_holes_sf %>%
+  st_intersection(El_Paso_city, pot_holes_sf)
+
 pot_holes_sf$YEAR[pot_holes_sf$YEAR == 2106] <- 2016
 
 # new sf with last five years of points data only for easier legibility on maps
-pot_holes_sf_last5yrs <- pot_holes_sf %>% dplyr::filter(YEAR > 2016)
+pot_holes_sf_2015to2018 <- pot_holes_sf %>% dplyr::filter(YEAR > 2014 & YEAR < 2019)
+pot_holes_sf_2019to2021 <- pot_holes_sf %>% dplyr::filter(YEAR > 2018)
+pot_holes_sf_2018 <- pot_holes_sf %>% dplyr::filter(YEAR == 2018)
+```
 
-# last five years map
+
+```{r 2018 streets and potholes map}
+# 2018 map
 ggplot() +
-  geom_sf(data = El_Paso, fill="grey") +
-  geom_sf(data = pot_holes_sf_last5yrs, aes(colour=YEAR), size=0.2, show.legend = "point") +
-  labs(title = "Potholes 2016-2021",
+  geom_sf(data=EPCenterline, color="#585858", alpha=0.8) +
+  geom_sf(data = pot_holes_sf_2018, size=0.2, color="blue", alpha=0.2) +
+    geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  guides(fill="legend")+
+  labs(title = "Potholes and Centerlines in 2018",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+
+```{r lots of potholes maps}
+# 2015-2018 map
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="grey") +
+  geom_sf(data = pot_holes_sf_2015to2018, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  labs(title = "Potholes in 2015-2018",
        subtitle = "El Paso, TX") + mapTheme()
 
+#  2019-2021 map
 ggplot() +
-  geom_sf(data = El_Paso, fill="grey") +
-  geom_sf(data = pot_holes_sf, aes(colour=YEAR), size=0.2, show.legend = "point") +
-  labs(title = "Potholes",
+  geom_sf(data = El_Paso_city, fill="grey") +
+  geom_sf(data = pot_holes_sf_2019to2021, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  labs(title = "Potholes 2019-2021",
        subtitle = "El Paso, TX") + mapTheme()
 
 ggplot(pot_holes_sf, aes(y=YEAR)) + 
