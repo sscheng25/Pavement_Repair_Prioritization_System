@@ -116,7 +116,7 @@ VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
 ```
 The "el_paso_pass2" shapefile is too large for our GitHub repository, so load read in the file locally (download from our Google Drive). Only run one of the three code chunks below assigned to your name.
 ```{r load el_paso_pass2 data from local computer file path - SISUN}
-elpaso_pass <- st_read("Data/PCI_Study/elpaso_pass2.shp") %>%
+elpaso_pass <- st_read("C:/Users/CSS/Desktop/MUSA801/Data/PCI_Study/elpaso_pass2.shp") %>%
   st_transform('ESRI:102339')
 
 ```
@@ -453,6 +453,16 @@ ggplot(waze_sf, aes(y=Subtype)) +
 ```
 
 
+```{r waze data NAs}
+ggplot() +
+  geom_sf(data = El_Paso_city, color="grey") +
+  geom_sf(data = waze_sf %>%
+            subset(is.na(Subtype)), color = "red", size=0.5, show.legend = "point") +
+  labs(title = "Waze jam data points with NA subtype",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+
 ```{r process pot holes data to sf}
 pot_holes_sf <-
   pot_holes %>%
@@ -551,6 +561,16 @@ ggplot(EPCenterline, aes(y=CLASS)) +
   labs(title = "Pavement Center Lines by Class",
        subtitle = "El Paso, TX") + plotTheme()
 
+```
+
+
+```{r center line data with MUNR City of El Paso}
+ggplot() +
+  geom_sf(data = El_Paso_city, color="grey") +
+  geom_sf(data = EPCenterline %>%
+            subset(MUNR == 'CITY OF EL PASO'), colour="red",) +
+  labs(title = "Center line with MUNR CITY OF EL PASO",
+       subtitle = "El Paso, TX") + mapTheme()
 ```
 
 
