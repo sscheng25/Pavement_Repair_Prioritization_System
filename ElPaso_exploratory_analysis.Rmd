@@ -344,7 +344,7 @@ ggplot()+
 
 ```
 ## El Paso Socioeconomics (data from 2019 5yr ACS)
-```{r}
+```{r censues data}
 
 EP_econ <-
   get_acs(geography = "tract",
@@ -503,7 +503,7 @@ pot_holes_sf_2018 <- pot_holes_sf %>% dplyr::filter(YEAR == 2018)
 ggplot() +
   geom_sf(data=EPCenterline, color="#585858", alpha=0.8) +
   geom_sf(data = pot_holes_sf_2018, size=0.2, color="blue", alpha=0.2) +
-    geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
   guides(fill="legend")+
   labs(title = "Potholes and Centerlines in 2018",
        subtitle = "El Paso, TX") + mapTheme()
@@ -578,6 +578,7 @@ ggplot() +
 # glimpse(center_line)
 
 ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
   geom_sf(data = center_line, aes(color = PCI_2018)) +
   scale_color_viridis(direction=-1)+
   labs(title = "Street Centerlines with PCI 2018",
@@ -588,6 +589,80 @@ ggplot(center_line, aes(y=PCI_2018)) +
   geom_bar(width=0.5, color="transparent", fill = "#FF6666") +
   labs(title = "PCI Distribution",
        subtitle = "El Paso, TX") + plotTheme()
+```
+
+
+```{r pavements with negative PCIs}
+# glimpse(center_line)
+
+negative_PCI_list <-
+  center_line %>%
+  subset(PCI_2018 < 0)
+
+unique(negative_PCI_list$PCI_2018)
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list, aes(color = PCI_2018)) +
+  labs(title = "PCI with a negative value",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -1), aes(color = PCI_2018)) +
+  labs(title = "PCI = -1",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -2), aes(color = PCI_2018)) +
+  labs(title = "PCI = -2",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -4), aes(color = PCI_2018)) +
+  labs(title = "PCI = -4",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -6), aes(color = PCI_2018)) +
+  labs(title = "PCI = -6",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -7), aes(color = PCI_2018)) +
+  labs(title = "PCI = -7",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -8), aes(color = PCI_2018)) +
+  labs(title = "PCI = -8",
+       subtitle = "El Paso, TX") +mapTheme()
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = negative_PCI_list %>%
+            subset(PCI_2018 == -9), aes(color = PCI_2018)) +
+  labs(title = "PCI = -9",
+       subtitle = "El Paso, TX") +mapTheme()
+
+# write.csv(st_drop_geometry(negative_PCI_list), "C:/Users/CSS/Desktop/MUSA801/Data/negative_PCI_list.csv", row.names = FALSE)
+
+# Zero PCI: an empty list
+zero_PCI_list <-
+  center_line %>%
+  subset(PCI_2018 == 0)
+
 ```
 
 
