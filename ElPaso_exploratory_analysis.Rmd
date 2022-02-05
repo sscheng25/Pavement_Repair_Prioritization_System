@@ -544,9 +544,14 @@ ggplot() +
 
 
 ```{r EP center lines}
-# delete duplicated "LOCAL" class first
 # unique(EPCenterline$CLASS)
 
+# subset center line data to El Paso city maintained segments
+EPCenterline <-
+  EPCenterline %>%
+  subset(MUNR == 'CITY OF EL PASO')
+
+# delete duplicated "LOCAL" class
 EPCenterline$CLASS[EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n"] <- "LOCAL"
 unique(EPCenterline$CLASS)
 
@@ -561,6 +566,50 @@ ggplot(EPCenterline, aes(y=CLASS)) +
   labs(title = "Pavement Center Lines by Class",
        subtitle = "El Paso, TX") + plotTheme()
 
+```
+
+
+```{r explore centerline data with PCI values}
+EPcenterline_with_PCI <-
+  EPCenterline %>%
+  st_join(center_line)
+
+ggplot(EPcenterline_with_PCI, aes(y=CLASS)) +
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "Pavement Center Lines by Class",
+       subtitle = "El Paso, TX") + plotTheme()
+
+ggplot(EPcenterline_with_PCI, aes(y=STATUS)) +
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "Pavement Center Lines by status",
+       subtitle = "El Paso, TX") + plotTheme()
+
+class_PCI <-
+  EPcenterline_with_PCI %>%
+  subset(STATUS == 'PAVED') %>%
+  st_drop_geometry() %>%
+  drop_na(PCI_2018) %>%
+  group_by(CLASS) %>%
+  summarise(PCI=mean(PCI_2018))
+
+ggplot(class_PCI, aes(x=PCI, y=CLASS)) + 
+  geom_bar(stat = "identity", color="black", fill = "#FF6666") +
+  labs(title = "Average PCI value by Class",
+       subtitle = "El Paso, TX") + plotTheme()
+
+plan_area_PCI <-
+  EPcenterline_with_PCI %>%
+  st_drop_geometry() %>%
+  subset(STATUS == 'PAVED') %>%
+  drop_na(PCI_2018) %>%
+  drop_na(PLANAREA) %>%
+  group_by(PLANAREA) %>%
+  summarise(PCI=mean(PCI_2018))
+
+ggplot(plan_area_PCI, aes(x=PCI, y=PLANAREA)) + 
+  geom_bar(stat = "identity", color="black", fill = "#FF6666") +
+  labs(title = "Average PCI Value by Planning Area",
+       subtitle = "El Paso, TX") + plotTheme()
 ```
 
 
