@@ -755,14 +755,18 @@ VMT$GEOID <- substr(VMT$FIPS, 1, 11)
 
 VMT_sf <-
   census_geom %>%
-  right_join(VMT, by="GEOID")
+  right_join(VMT, by="GEOID") %>%
+  subset(id != 0) %>%
+  group_by(GEOID) %>%
+  summarise(VMT = sum(count))
 
 ggplot() +
-  geom_sf(data = VMT_sf, aes(fill = count)) +
+  geom_sf(data = VMT_sf, aes(fill = VMT)) +
   labs(title = "VMT",
        subtitle = "El Paso, TX")
 
 ```
+
 
 ```{r tl_roads_data}
 #comparing TIGER/Line shapefile to the street centerlines shapefile from Alex
