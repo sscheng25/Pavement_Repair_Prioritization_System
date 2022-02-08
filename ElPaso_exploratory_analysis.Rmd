@@ -90,8 +90,8 @@ plotTheme <- function(base_size = 12) {
 ```
 
 
-```{r load data sources in github repo, warning=FALSE}
-# Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4205).
+```{r load data sources in github repo, message=FALSE, warning=FALSE}
+# Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4203).
 # Spatial unit: meter.
 CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
   st_transform('ESRI:102339')
@@ -123,8 +123,8 @@ elpaso_pass <- st_read("C:/Users/CSS/Desktop/MUSA801/Data/PCI_Study/elpaso_pass2
 
 ```{r load el_paso_pass2 data from local computer file path - JENNA}
 #JENNA - local file path
-#elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
-#  st_transform('ESRI:102339')
+elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
+  st_transform('ESRI:102339')
 ```
 
 ```{r load el_paso_pass2 data from local computer file path - KRISTIN}
@@ -133,7 +133,7 @@ elpaso_pass <- st_read("C:/Users/CSS/Desktop/MUSA801/Data/PCI_Study/elpaso_pass2
 
 Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa).
 
-```{r boundary data of El Paso county and city}
+```{r boundary data of El Paso county and city, message=FALSE, warning=FALSE}
 texas <-
   st_read("Data/TexasCountiesMap.geojson")
 
@@ -159,6 +159,7 @@ El_Paso_city <-
   filter(CITY_NM=='El Paso') %>%
   st_transform('ESRI:102339')
 ```
+
 
 ## El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
@@ -363,7 +364,9 @@ EP_econ <-
          transport_to_work = B08301_001E) %>%
   dplyr::select("GEOID","NAME","total_pop","med_hh_income","med_rent","transport_to_work","geometry")%>% #drop MOE columns
   mutate(pct_transport_to_work = (ifelse(total_pop > 0, transport_to_work / total_pop,0))*100)
+
 ```
+
 ```{r census_socioecon_maps}
 econ_long <- EP_econ%>%
   dplyr::select(GEOID,NAME, med_hh_income, med_rent, pct_transport_to_work)%>%
@@ -390,6 +393,7 @@ ggplot()+
   labs(title="Percent Population with Transportation to Work in 2019",
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
 ```
+
 ```{r census_socioecon_medhhinc_map}
 #median household inc map
 ggplot()+
@@ -767,7 +771,6 @@ ggplot() +
 
 ```
 
-
 ```{r tl_roads_data}
 #comparing TIGER/Line shapefile to the street centerlines shapefile from Alex
 tl_roads <- st_read("Data/tl_2018_roads/tl_2018_48141_roads.shp") %>%
@@ -778,3 +781,130 @@ ggplot(tl_roads, aes(y=RTTYP)) +
   labs(title = "El Paso,TX Roads by RouteType",
        subtitle = "TIGER/Line 2018")
 ```
+
+
+## El Paso Land Cover
+Lots of raster data operations!
+
+```{r read in el paso city land cover raster}
+EPcity_landcover <-
+  raster("Data/Data_NLCD/ElPasoArea_LandCover_ImperviousCover/NLCD_2019_Land_Cover_L48_20210604_hHjclStONh9yCsFQkZ5z.tiff")
+
+# plot to see
+plot(EPcity_landcover)
+```
+
+```{r reproject raster}
+EPcity_landcover_reproject <- projectRaster(EPcity_landcover,
+                                       crs = crs(El_Paso_city))
+```
+
+```{r crop and mask raster}
+# Crop raster data by extent of state subset
+EPcity_landcover_crop <- crop(EPcity_landcover_reproject, extent(El_Paso_city))
+
+# Identify those pixels in raster that lie within the borders of the given shp. Use the 'mask' function for that.
+
+EPcity_landcover_crop <- mask(EPcity_landcover_crop, El_Paso_city)
+#plot(EPcity_landcover_crop)
+
+```
+
+
+```{r create function for converting raster to df, message=FALSE, warning=FALSE}
+rasterdf <- function(x, aggregate = 1) {
+  resampleFactor <- aggregate        
+  inputRaster <- x    
+  inCols <- ncol(inputRaster)
+  inRows <- nrow(inputRaster)
+  # Compute numbers of columns and rows in the new raster for mapping
+  resampledRaster <- raster(ncol=(inCols / resampleFactor), 
+                            nrow=(inRows / resampleFactor))
+  # Match to the extent of the original raster
+  extent(resampledRaster) <- extent(inputRaster)
+  # Resample data on the new raster
+  y <- resample(inputRaster,resampledRaster,method='ngb')
+
+  # Extract cell coordinates into a data frame
+  coords <- xyFromCell(y, seq_len(ncell(y)))
+  # Extract layer names
+  dat <- stack(as.data.frame(getValues(y)))
+  # Add names - 'value' for data, 'variable' to indicate different raster layers
+  # in a stack
+  names(dat) <- c('value', 'variable')
+  dat <- cbind(coords, dat)
+  dat
+}
+
+```
+
+```{r convert NLCD raster to df}
+# convert to df
+EPcity_landcover_df <- rasterdf(EPcity_landcover_crop)
+```
+
+
+```{r map codes to names and pull colors from TIFF legend, message=FALSE, warning=FALSE}
+# library imports, just to make sure we have them all
+library(colorspace)
+library(rgdal)          
+library(RColorBrewer) 
+library(rasterVis)    
+library(sp)
+
+LCcodes <- c(11,12,21,22,23,24,31,41,42,43,52,71,81,82,90,95)
+
+LCnames <-c(
+  "Water",
+  "IceSnow",
+  "DevelopedOpen",
+  "DevelopedLow",
+  "DevelopedMed",
+  "DevelopedHigh",
+  "Barren",
+  "DeciduousForest",
+  "EvergreenForest",
+  "MixedForest",
+  "ShrubScrub",
+  "GrassHerbaceous",
+  "PastureHay",
+  "CultCrops",
+  "WoodyWetlands",
+  "EmergentHerbWet")
+
+LCcolors <- attr(EPcity_landcover, "legend")@colortable[LCcodes + 1]
+names(LCcolors) <- as.character(LCcodes)
+LCcolors
+
+```
+
+```{r map the final land cover raster, message=FALSE, warning=FALSE}
+ggplot(data = EPcity_landcover_df) +
+  geom_raster(aes(x = x, y = y, fill = as.character(value))) + 
+  scale_fill_manual(name = "Land cover",
+                    values = LCcolors,
+                    labels = LCnames[-2],
+                    na.translate = FALSE) +
+  coord_sf(expand = F) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "black")) + mapTheme()
+
+```
+
+```{r map land cover and roads with PCI}
+ggplot(data = EPcity_landcover_df) +
+  geom_raster(aes(x = x, y = y, fill = as.character(value))) + 
+  scale_fill_manual(name = "Land cover",
+                    values = LCcolors,
+                    labels = LCnames[-2],
+                    na.translate = FALSE) +
+  coord_sf(expand = F) +
+    geom_sf(data = center_line, aes(color = PCI_2018)) +
+  scale_color_viridis(direction=-1)+
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) + mapTheme()
+
+
+```
+
