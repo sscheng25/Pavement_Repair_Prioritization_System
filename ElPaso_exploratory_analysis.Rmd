@@ -129,6 +129,7 @@ elpaso_pass <- st_read("Data_JennaLocal/elpaso_pass2/elpaso_pass2.shp") %>%
 
 ```{r load el_paso_pass2 data from local computer file path - KRISTIN}
 # KRISTIN - add your local path here
+elpaso_pass <- st_read("C:/Users/kchan/Desktop/Spring2022/MUSAPracticum/EPrepo/driveData/elpaso_pass2/elpaso_pass2.shp")
 ```
 
 Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa).
@@ -172,7 +173,7 @@ census_api_key("41e1c0d912341017fa6f36a5da061d3b23de335e", overwrite = TRUE)
 ```
 
 ```{r census_api_key_KRISTIN}
-census_api_key("", overwrite=TRUE)
+census_api_key("d9eb52b3755db802bb6aa16b739687dde1e42613", overwrite=TRUE)
 ```
 
 ```{r census_demographics}
