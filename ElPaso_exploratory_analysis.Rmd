@@ -888,11 +888,14 @@ EPCenterline_with_PCI <-
   EPCenterline_new %>%
   st_join(centerline_with_age, join = st_intersects)
 
-EPCenterline_new <-
+## need someone help me look into this dataframe
+## EPCenterline_final has 76072 rows of data, but the left object (EPCenterline_new) in the left_join below has only 34224 rows
+EPCenterline_final <-
   EPCenterline_new %>%
   left_join(EPCenterline_with_PCI %>%
               st_drop_geometry() %>%
-              dplyr::select(index, PCI_2018, Res_Year), by = 'index')
+              dplyr::select(index, PCI_2018, Res_Year), by = 'index') 
+
 ```
 
 
@@ -1027,7 +1030,7 @@ ggplot(data = EPcity_landcover_df) +
                     labels = LCnames[-2],
                     na.translate = FALSE) +
   coord_sf(expand = F) +
-    geom_sf(data = center_line, aes(color = PCI_2018)) +
+    geom_sf(data = centerline_with_age, aes(color = PCI_2018)) +
   scale_color_viridis(direction=-1)+
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) + mapTheme()
