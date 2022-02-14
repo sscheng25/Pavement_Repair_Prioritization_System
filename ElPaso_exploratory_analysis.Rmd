@@ -694,7 +694,7 @@ potholes_sf <-
 ```
 
 
-```{r grouping pot holes data by year, message=FALSE, warning=FALSE}
+```{r grouping pot holes data by year 1, message=FALSE, warning=FALSE}
 potholes_sf$YEAR <- format(mdy_hms(potholes_sf$ACTUALFINISHDATE), format='%Y')
 glimpse(potholes_sf)
 
@@ -707,7 +707,7 @@ potholes_sf$YEAR <- potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 ```
 
 
-```{r grouping pot holes data by year, message=FALSE, warning=FALSE}
+```{r grouping pot holes data by year 2, message=FALSE, warning=FALSE}
 # new sf with last five years of points data only for easier legibility on maps
 potholes_sf_2015to2018 <- potholes_sf %>% dplyr::filter(YEAR > 2014 & YEAR < 2019)
 potholes_sf_2019to2021 <- potholes_sf %>% dplyr::filter(YEAR > 2018)
