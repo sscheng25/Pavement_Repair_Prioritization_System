@@ -10,6 +10,7 @@ output:
 editor_options:
   chunk_output_type: inline
 ---
+## Set up
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = FALSE)
@@ -1039,7 +1040,7 @@ ggplot(data = EPcity_landcover_df) +
 ```
 
 
-### Correlation Matrix
+## Correlation Matrix
 
 ```{r correlation Matrix}
 numVars <-
