@@ -40,6 +40,7 @@ library(spdep)
 library(grid)
 library(mapview)
 library(stringr)
+library(ggcorrplot)
 
 palette5 <- c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
 palette4 <- c("#D2FBD4","#92BCAB","#527D82","#123F5A")
@@ -92,12 +93,12 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-# source("Sisun.R")
+source("Sisun.R")
 ```
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Jenna.R")
+# source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
@@ -709,7 +710,7 @@ potholes_sf$YEAR <- potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 # new sf with last five years of points data only for easier legibility on maps
 potholes_sf_2015to2018 <- potholes_sf %>% dplyr::filter(YEAR > 2014 & YEAR < 2019)
 potholes_sf_2019to2021 <- potholes_sf %>% dplyr::filter(YEAR > 2018)
-potholes_sf_2018 <- pot_holessf %>% dplyr::filter(YEAR == 2018)
+potholes_sf_2018 <- potholes_sf %>% dplyr::filter(YEAR == 2018)
 ```
 
 
@@ -745,6 +746,8 @@ ggplot(potholes_sf, aes(y=YEAR)) +
        subtitle = "El Paso, TX") + plotTheme()
 
 ```
+
+### Joining data together
 
 ```{r centerline buffer and potholes work}
 #create centerline buffer of 24ft and centerline buffer
@@ -793,6 +796,32 @@ ggplot(EPCenterline_new, aes(x=potholes_count)) + geom_histogram(fill="purple")
 
 ```
 
+```{r join waze data into street buffer}
+#join waze jam data to EPCenterline_buffer using nearest feature
+waze_centerlines <-  st_join(waze_sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+waze_centerlines_clean <- waze_centerlines %>%
+  st_drop_geometry()
+```
+
+
+```{r waze jams per streetsegment and merging back with centerline data}
+# count potholes per street segment
+waze_groupings <- waze_centerlines_clean %>% 
+  group_by(index) %>%
+  summarize(waze_count=n())
+
+#then join back to initial EPCenterline using index as the ID
+EPCenterline_new <- merge(EPCenterline_new, waze_groupings, by = "index", all.x=TRUE)
+
+#replace NAs in potholes count column with 0
+EPCenterline_new$waze_count[is.na(EPCenterline_new$waze_count)] <- 0
+
+```
+
+### Zoning data
+
 ```{r zoning map, message=FALSE, warning=FALSE}
 # glimpse(zoning)
 
@@ -803,10 +832,11 @@ ggplot() +
 
 ```
 
+### VMT data
 
 ```{r VMT data}
 census_geom <-
-  EP_census %>%
+  EP_econ %>%
   subset(select = c("GEOID","geometry"))
 
 # VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
@@ -818,7 +848,8 @@ VMT_sf <-
   right_join(VMT, by="GEOID") %>%
   subset(id != 0) %>%
   group_by(GEOID) %>%
-  summarise(VMT = sum(count))
+  summarise(VMT = sum(count)) %>%
+  st_transform('ESRI:102339')
 
 ggplot() +
   geom_sf(data = VMT_sf, aes(fill = VMT)) +
@@ -826,6 +857,46 @@ ggplot() +
        subtitle = "El Paso, TX")
 
 ```
+
+
+```{r merging VMT data into EPCenterline_new}
+EPCenterline_new <- 
+  EPCenterline_new %>%
+  st_join(VMT_sf)
+
+```
+
+### Joining Census data into EPCenterline_new
+
+```{r merging census data into EPcenterline}
+EPCenterline_new <- 
+  EPCenterline_new %>%
+  left_join(EP_econ %>%
+              st_drop_geometry(), by = 'GEOID') %>%
+  left_join(EP_race %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, pctWhite), by = 'GEOID') %>%
+  left_join(EP_ethnicity %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, pctNotHL), by = 'GEOID') 
+
+```
+
+
+```{r merging PCI and age data}
+EPCenterline_with_PCI <-
+  EPCenterline_new %>%
+  st_join(centerline_with_age, join = st_intersects)
+
+EPCenterline_new <-
+  EPCenterline_new %>%
+  left_join(EPCenterline_with_PCI %>%
+              st_drop_geometry() %>%
+              dplyr::select(index, PCI_2018, Res_Year), by = 'index')
+```
+
+
+### TL_Roads data
 
 ```{r tl_roads_data}
 #comparing TIGER/Line shapefile to the street centerlines shapefile from Alex
@@ -963,4 +1034,30 @@ ggplot(data = EPcity_landcover_df) +
 
 
 ```
+
+
+### Correlation Matrix
+
+```{r correlation Matrix}
+numVars <-
+  EPCenterline_new %>%
+  dplyr::select(potholes_count, waze_count, VMT, total_pop, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year) %>%
+  st_drop_geometry() %>%
+  na.omit()
+
+ggcorrplot(
+  round(cor(numVars), 1), 
+  p.mat = cor_pmat(numVars),
+  colors = c("#25CB10", "white", "#FA7800"),
+  type="lower",
+  show.diag = TRUE,
+  insig = "blank") +  
+  labs(title = "Correlation Matrix for Numeric Variables") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  plotTheme()
+```
+
+
+
+
 
