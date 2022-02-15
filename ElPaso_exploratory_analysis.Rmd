@@ -94,7 +94,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Sisun.R")
+#source("Sisun.R")
 ```
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
@@ -104,7 +104,7 @@ source("Sisun.R")
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-# source("Kristin.R")
+ source("Kristin.R")
 ```
 
 ```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
@@ -129,6 +129,8 @@ potholes <- read_csv("Data/POTHOLES2013_2021.csv")
 waze_data <- read_csv("Data/Waze for Cities Data3.csv")
 
 VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
+
+crash18 <- st_read("Data/CRIS2018/CRIS2018.shp")
 
 # Note: The "el_paso_pass2" shapefile is too large for our GitHub repository, so it is read in for each team member using .source() - each person has a source file with local file paths and keys.
 
@@ -172,6 +174,9 @@ El_Paso_city <-
   st_read("Data/TxDOT_City_Boundaries.geojson") %>%
   filter(CITY_NM=='El Paso') %>%
   st_transform('ESRI:102339')
+
+#writing out for arcmap processing
+#st_write(El_Paso_city, "ElPaso_CityBound.shp")
 ```
 
 
@@ -750,6 +755,8 @@ ggplot(potholes_sf, aes(y=YEAR)) +
 
 ### Joining data together
 
+### Potholes data
+
 ```{r centerline buffer and potholes work}
 #create centerline buffer of 24ft and centerline buffer
 EPCenterline_buffer <- st_buffer(EPCenterline, dist=24) %>% st_as_sf()
@@ -797,6 +804,8 @@ ggplot(EPCenterline_new, aes(x=potholes_count)) + geom_histogram(fill="purple")
 
 ```
 
+### Waze data
+
 ```{r join waze data into street buffer}
 #join waze jam data to EPCenterline_buffer using nearest feature
 waze_centerlines <-  st_join(waze_sf, EPCenterline_buffer, join = st_nearest_feature)
@@ -820,6 +829,45 @@ EPCenterline_new <- merge(EPCenterline_new, waze_groupings, by = "index", all.x=
 EPCenterline_new$waze_count[is.na(EPCenterline_new$waze_count)] <- 0
 
 ```
+
+### Crash data
+
+```{r join crashes to centerlines}
+#replace 0s in lat long columns with NA so we can omit
+crash18$Latitude <- as.numeric(as.character(crash18$Latitude))
+
+crash18['Latitude'=='0'] <- NA
+
+#transforming to our crs
+crash18_sf <- crash18 %>%
+  na.omit() %>%
+  st_as_sf(coords = c("Latitude", "Longitude"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+#join crashes to EPCenterline_buffer using nearest feature
+crash_centerlines <-  st_join(crash18_sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+crash_centerlines_clean <- crash_centerlines %>%
+  dplyr::select(Crash_ID, index) %>% st_drop_geometry()
+```
+
+```{r summarizing crashes by centerline}
+#NEED TO FIX THIS CHUNK
+# count crashes per street segment
+crash_groupings <- crash_centerlines %>% 
+  group_by(index) %>%
+  summarize(crash_count=n())
+
+#then join back to initial EPCenterline using index as the ID
+EPCenterline_new <- merge(EPCenterline, crash_groupings, by = "index", all.x=TRUE)
+
+#replace NAs in crash count column with 0
+EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
+```
+
 
 ### Zoning data
 
