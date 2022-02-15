@@ -834,12 +834,11 @@ EPCenterline_new$waze_count[is.na(EPCenterline_new$waze_count)] <- 0
 
 ```{r join crashes to centerlines}
 #replace 0s in lat long columns with NA so we can omit
-crash18$Latitude <- as.numeric(as.character(crash18$Latitude))
+crash18_trim<-crash18[!(crash18$Latitude==0 | crash18$Longitude==0),]
 
-crash18['Latitude'=='0'] <- NA
 
 #transforming to our crs
-crash18_sf <- crash18 %>%
+crash18_sf <- crash18_trim %>%
   na.omit() %>%
   st_as_sf(coords = c("Latitude", "Longitude"),
            crs = 'epsg:2277',
@@ -857,17 +856,34 @@ crash_centerlines_clean <- crash_centerlines %>%
 ```{r summarizing crashes by centerline}
 #NEED TO FIX THIS CHUNK
 # count crashes per street segment
-crash_groupings <- crash_centerlines %>% 
+crash_groupings <- crash_centerlines_clean %>% 
   group_by(index) %>%
   summarize(crash_count=n())
 
 #then join back to initial EPCenterline using index as the ID
-EPCenterline_new <- merge(EPCenterline, crash_groupings, by = "index", all.x=TRUE)
+EPCenterline_with_crash <- merge(EPCenterline, crash_groupings, by = "index", all.x=TRUE)
 
 #replace NAs in crash count column with 0
-EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
+EPCenterline_with_crash$crash_count[is.na(EPCenterline_with_crash$crash_count)] <- 0
 ```
 
+```{r visualize street centerline segments by crash count, message=FALSE, warning=FALSE}
+# only mapping when crashes are greater than or equal to 1
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = EPCenterline_with_crash , aes(color = crash_count)) +
+  scale_color_viridis(direction=-1, limits = c(1, 150))+
+  labs(title = "Street Centerlines by Number of Crashes",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+```{r street centerlines by crash count histogram}
+# excluding segments with 0 crashes
+ggplot(EPCenterline_with_crash, aes(x=crash_count)) + geom_histogram(fill="purple") + scale_x_continuous(limits = c(1, 150))
+
+#including segments with 0 crashes
+ggplot(EPCenterline_with_crash, aes(x=crash_count)) + geom_histogram(fill="purple")
+```
 
 ### Zoning data
 
