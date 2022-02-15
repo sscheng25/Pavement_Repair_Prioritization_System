@@ -143,6 +143,7 @@ EPCenterline$index <- 1:nrow(EPCenterline)
 # remove some unneeded columns
 EPCenterline <- EPCenterline %>%
   dplyr::select(-POD_ALIAS1, -POD_ALIAS2, -POD_ALIAS3, -POD_ALIAS4, -STS_ALIAS4 , -STN_ALIAS4, -PRD_ALIAS4 , -STS_ALIAS3, -PRD_ALIAS3, -STS_ALIAS2, -PRD_ALIAS2, -STS_ALIAS1, -PRD_ALIAS1, -STR, -STL, -ESNL, -ESNR)
+
 ```
 
 
@@ -441,6 +442,11 @@ EPCenterline <-
 
 # delete duplicated "LOCAL" class
 EPCenterline$CLASS[EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n"] <- "LOCAL"
+unique(EPCenterline$CLASS)
+
+EPCenterline <-
+  EPCenterline %>%
+  subset(CLASS == "LOCAL" | CLASS == "MINOR" | CLASS == "MAJOR" | CLASS == "COLLECTOR" | CLASS == "MINOR PR" | CLASS == "COLLECTOR PR" | CLASS == "MAJOR PR" )
 unique(EPCenterline$CLASS)
 
 ggplot() +
