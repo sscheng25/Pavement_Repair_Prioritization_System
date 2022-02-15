@@ -861,7 +861,7 @@ crash_groupings <- crash_centerlines_clean %>%
   summarize(crash_count=n())
 
 #then join back to initial EPCenterline using index as the ID
-EPCenterline_new <- merge(EPCenterline, crash_groupings, by = "index", all.x=TRUE)
+EPCenterline_new <- merge(EPCenterline_new, crash_groupings, by = "index", all.x=TRUE)
 
 #replace NAs in crash count column with 0
 EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
@@ -1108,7 +1108,7 @@ ggplot(data = EPcity_landcover_df) +
 
 ```{r correlation Matrix}
 numVars <-
-  EPCenterline_new %>%
+  EPCenterline_final %>%
   dplyr::select(potholes_count, waze_count, crash_count, VMT, total_pop, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year) %>%
   st_drop_geometry() %>%
   na.omit()
