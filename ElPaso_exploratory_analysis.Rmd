@@ -861,17 +861,17 @@ crash_groupings <- crash_centerlines_clean %>%
   summarize(crash_count=n())
 
 #then join back to initial EPCenterline using index as the ID
-EPCenterline_with_crash <- merge(EPCenterline, crash_groupings, by = "index", all.x=TRUE)
+EPCenterline_new <- merge(EPCenterline, crash_groupings, by = "index", all.x=TRUE)
 
 #replace NAs in crash count column with 0
-EPCenterline_with_crash$crash_count[is.na(EPCenterline_with_crash$crash_count)] <- 0
+EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
 ```
 
 ```{r visualize street centerline segments by crash count, message=FALSE, warning=FALSE}
 # only mapping when crashes are greater than or equal to 1
 ggplot() +
   geom_sf(data = El_Paso_city, fill="transparent", color="red") +
-  geom_sf(data = EPCenterline_with_crash , aes(color = crash_count)) +
+  geom_sf(data = EPCenterline_new , aes(color = crash_count)) +
   scale_color_viridis(direction=-1, limits = c(1, 150))+
   labs(title = "Street Centerlines by Number of Crashes",
        subtitle = "El Paso, TX") + mapTheme()
@@ -879,10 +879,10 @@ ggplot() +
 
 ```{r street centerlines by crash count histogram}
 # excluding segments with 0 crashes
-ggplot(EPCenterline_with_crash, aes(x=crash_count)) + geom_histogram(fill="purple") + scale_x_continuous(limits = c(1, 150))
+ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="purple") + scale_x_continuous(limits = c(1, 150))
 
 #including segments with 0 crashes
-ggplot(EPCenterline_with_crash, aes(x=crash_count)) + geom_histogram(fill="purple")
+ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="purple")
 ```
 
 ### Zoning data
@@ -1109,7 +1109,7 @@ ggplot(data = EPcity_landcover_df) +
 ```{r correlation Matrix}
 numVars <-
   EPCenterline_new %>%
-  dplyr::select(potholes_count, waze_count, VMT, total_pop, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year) %>%
+  dplyr::select(potholes_count, waze_count, crash_count, VMT, total_pop, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year) %>%
   st_drop_geometry() %>%
   na.omit()
 
