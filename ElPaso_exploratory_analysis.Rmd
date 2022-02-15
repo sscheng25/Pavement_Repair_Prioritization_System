@@ -94,7 +94,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-#source("Sisun.R")
+source("Sisun.R")
 ```
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
@@ -104,7 +104,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
- source("Kristin.R")
+# source("Kristin.R")
 ```
 
 ```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
@@ -1119,10 +1119,20 @@ ggcorrplot(
   colors = c("#25CB10", "white", "#FA7800"),
   type="lower",
   show.diag = TRUE,
+  lab = TRUE, 
   insig = "blank") +  
   labs(title = "Correlation Matrix for Numeric Variables") +
   theme(plot.title = element_text(hjust = 0.5)) +
   plotTheme()
+
+ggcorrplot(
+  round(cor(numVars), 1), 
+  p.mat = cor_pmat(numVars),
+  colors = c("#0000FF", "white", "#DC143C"),
+  type="lower",
+  method = 'circle', 
+  insig = "blank") +  
+  labs(title = "Correlation Matrix for Numeric Variables") 
 ```
 
 
