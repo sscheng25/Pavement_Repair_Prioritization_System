@@ -136,17 +136,6 @@ crash18 <- st_read("Data/CRIS2018/CRIS2018.shp")
 
 ```
 
-```{r cleaning EPCenterlines data}
-# create an index so that each segment has a unique id
-EPCenterline$index <- 1:nrow(EPCenterline)
-
-# remove some unneeded columns
-EPCenterline <- EPCenterline %>%
-  dplyr::select(-POD_ALIAS1, -POD_ALIAS2, -POD_ALIAS3, -POD_ALIAS4, -STS_ALIAS4 , -STN_ALIAS4, -PRD_ALIAS4 , -STS_ALIAS3, -PRD_ALIAS3, -STS_ALIAS2, -PRD_ALIAS2, -STS_ALIAS1, -PRD_ALIAS1, -STR, -STL, -ESNL, -ESNR)
-
-```
-
-
 Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa).
 
 ```{r boundary data of El Paso county and city, message=FALSE, warning=FALSE, results='hide'}
@@ -427,26 +416,24 @@ ggplot()+
 
 ## Bring in centerline and PCI information
 ```{r EP centerlines, message=FALSE, warning=FALSE}
-# unique(EPCenterline$CLASS)
-
-# subset centerline data to El Paso city maintained segments
-EPCenterline <-
-  EPCenterline %>%
-  subset(MUNR == 'CITY OF EL PASO')
-
-# Clip to el paso city boundary
-EPCenterline <-
-  EPCenterline %>%
-  st_intersection(El_Paso_city, EPCenterline)
-
+# create an index so that each segment has a unique id
+EPCenterline$index <- 1:nrow(EPCenterline)
 
 # delete duplicated "LOCAL" class
 EPCenterline$CLASS[EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n"] <- "LOCAL"
 unique(EPCenterline$CLASS)
 
+# remove some unneeded columns
+# subset centerline data to El Paso city maintained segments
+# Clip to el paso city boundary
 EPCenterline <-
   EPCenterline %>%
-  subset(CLASS == "LOCAL" | CLASS == "MINOR" | CLASS == "MAJOR" | CLASS == "COLLECTOR" | CLASS == "MINOR PR" | CLASS == "COLLECTOR PR" | CLASS == "MAJOR PR" )
+  dplyr::select(-POD_ALIAS1, -POD_ALIAS2, -POD_ALIAS3, -POD_ALIAS4, -STS_ALIAS4 , -STN_ALIAS4, -PRD_ALIAS4 , -STS_ALIAS3, -PRD_ALIAS3, -STS_ALIAS2, -PRD_ALIAS2, -STS_ALIAS1, -PRD_ALIAS1, -STR, -STL, -ESNL, -ESNR) %>%
+  subset(MUNR == 'CITY OF EL PASO') %>%
+  st_intersection(El_Paso_city, EPCenterline) %>%
+  subset(CLASS == "LOCAL" | CLASS == "MINOR" | CLASS == "MAJOR" | CLASS == "COLLECTOR" | CLASS == "MINOR PR" | CLASS == "COLLECTOR PR" | CLASS == "MAJOR PR" ) %>%
+  mutate(pave_length = st_length(geometry))
+
 unique(EPCenterline$CLASS)
 
 ggplot() +
@@ -787,6 +774,11 @@ EPCenterline_new <- merge(EPCenterline, potholes_groupings, by = "index", all.x=
 #replace NAs in potholes count column with 0
 EPCenterline_new$potholes_count[is.na(EPCenterline_new$potholes_count)] <- 0
 
+# calculate potholes per 100 meters
+EPCenterline_new <-
+  EPCenterline_new %>%
+  mutate(potholes_len = potholes_count*100/pave_length)
+
 ```
 
 ```{r visualize street centerline segments by potholes count, message=FALSE, warning=FALSE}
@@ -834,6 +826,11 @@ EPCenterline_new <- merge(EPCenterline_new, waze_groupings, by = "index", all.x=
 #replace NAs in potholes count column with 0
 EPCenterline_new$waze_count[is.na(EPCenterline_new$waze_count)] <- 0
 
+# calculate waze jams per 100 meters
+EPCenterline_new <-
+  EPCenterline_new %>%
+  mutate(waze_len = waze_count*100/pave_length)
+
 ```
 
 ### Crash data
@@ -871,6 +868,11 @@ EPCenterline_new <- merge(EPCenterline_new, crash_groupings, by = "index", all.x
 
 #replace NAs in crash count column with 0
 EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
+
+# calculate crahs per 100 meters
+EPCenterline_new <-
+  EPCenterline_new %>%
+  mutate(crash_len = crash_count*100/pave_length)
 ```
 
 ```{r visualize street centerline segments by crash count, message=FALSE, warning=FALSE}
@@ -920,11 +922,15 @@ VMT_sf <-
   subset(id != 0) %>%
   group_by(GEOID) %>%
   summarise(VMT = sum(count)) %>%
+  merge(EP_econ %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, total_pop), by="GEOID",all.x=TRUE) %>%
+  mutate(VMT_pop = VMT/total_pop) %>%
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = VMT_sf, aes(fill = VMT)) +
-  labs(title = "VMT",
+  geom_sf(data = VMT_sf, aes(fill = VMT_pop)) +
+  labs(title = "VMT per population",
        subtitle = "El Paso, TX")
 
 ```
@@ -1115,7 +1121,9 @@ ggplot(data = EPcity_landcover_df) +
 ```{r correlation Matrix}
 numVars <-
   EPCenterline_final %>%
-  dplyr::select(potholes_count, waze_count, crash_count, VMT, total_pop, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year) %>%
+  dplyr::select(potholes_count, waze_count, crash_count, 
+                VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year,
+                potholes_len, waze_len, crash_len) %>%
   st_drop_geometry() %>%
   na.omit()
 
