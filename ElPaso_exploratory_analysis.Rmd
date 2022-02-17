@@ -67,6 +67,28 @@ mapTheme <- function(base_size = 12) {
     strip.text.x = element_text(size = 14))
 }
 
+# add a new map theme
+theme_map <- function(...) {
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Ubuntu Regular", color = "#22211d"),
+    axis.line = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    # panel.grid.minor = element_line(color = "#ebebe5", size = 0.2),
+    panel.grid.major = element_line(color = "#ebebe5", size = 0.2),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+    panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+    legend.background = element_rect(fill = "#f5f5f2", color = NA),
+    panel.border = element_blank(),
+    ...
+  )
+}
+
 plotTheme <- function(base_size = 12) {
   theme(
     text = element_text( color = "black"),
@@ -309,6 +331,37 @@ EP_age_long_nototal<-EP_age_long[!(EP_age_long$Sex=="Total" | EP_age_long$variab
 ggplot(EP_age_long_nototal, aes(x = value, y = variable, fill = Sex)) +
   geom_col() + plotTheme()
 ```
+
+
+```{r population pyramid}
+
+# why my if statement always TRUE???? But when I print it out, there's TURE and FALSE
+for (i in 1:nrow(EP_age_long_nototal)) {
+  if (EP_age_long_nototal$Sex == "Male") {
+    EP_age_long_nototal[i, "variable"] <- substr(EP_age_long_nototal[i, "variable"], 12, 99)[1]
+  }
+  else {
+    EP_age_long_nototal[i, "variable"] <- substr(EP_age_long_nototal[i, "variable"], 14, 99)[1]
+  }
+}
+
+unique(EP_age_long_nototal$variable)
+
+pop_pyramid <-
+  EP_age_long_nototal %>%
+  group_by(variable, Sex) %>%
+  summarise(value = sum(value))
+
+ggplot(pop_pyramid, aes(x = variable, fill = Sex,
+                 y = ifelse(test = Sex == "Male",
+                            yes = -value, no = value))) + 
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = abs, limits = max(pop_pyramid$value) * c(-1,1)) +
+  labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
+  coord_flip()
+
+```
+
 
 ```{r census_demo_maps}
 #plotting census demographics data
@@ -615,12 +668,14 @@ ggplot() +
 ggplot() +
   geom_sf(data = elpaso_pass, color = "red") +
   labs(title = "elpaso_pass",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") +
+  mapTheme()
 
 ggplot(elpaso_pass, aes(y=pci_2018)) +
   geom_bar(width=0.5, color="transparent", fill = "#FF6666") +
   labs(title = "PCI distribution of Elpaso_pass",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") +
+  plotTheme()
 ```
 
 ### Waze data exploration
@@ -700,16 +755,16 @@ potholes_sf <-
   potholes_sf %>%
   subset(YEAR != 1900)
 
-potholes_sf$YEAR <- potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
+potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 
 ```
 
 
 ```{r grouping pot holes data by year 2, message=FALSE, warning=FALSE}
 # new sf with last five years of points data only for easier legibility on maps
-potholes_sf_2015to2018 <- potholes_sf %>% dplyr::filter(YEAR > 2014 & YEAR < 2019)
-potholes_sf_2019to2021 <- potholes_sf %>% dplyr::filter(YEAR > 2018)
-potholes_sf_2018 <- potholes_sf %>% dplyr::filter(YEAR == 2018)
+potholes_sf_2015to2018 <- potholes_sf %>% subset(YEAR > 2014 & YEAR < 2019)
+potholes_sf_2019to2021 <- potholes_sf %>% subset(YEAR > 2018)
+potholes_sf_2018 <- potholes_sf %>% subset(YEAR == 2018)
 ```
 
 
@@ -794,10 +849,10 @@ ggplot() +
 
 ```{r street centerlines by pothole count histogram}
 # excluding segments with 0 potholes
-ggplot(EPCenterline_new, aes(x=potholes_count)) + geom_histogram(fill="purple") + scale_x_continuous(limits = c(1, 150))
+ggplot(EPCenterline_new, aes(x=potholes_count)) + geom_histogram(fill="purple", color = "white") + scale_x_continuous(limits = c(1, 150)) + plotTheme()
 
 #including setgments with 0 potholes
-ggplot(EPCenterline_new, aes(x=potholes_count)) + geom_histogram(fill="purple")
+ggplot(EPCenterline_new, aes(x=potholes_count)) + geom_histogram(fill="purple", color = "white") + plotTheme()
 
 
 ```
@@ -887,10 +942,13 @@ ggplot() +
 
 ```{r street centerlines by crash count histogram}
 # excluding segments with 0 crashes
-ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="purple") + scale_x_continuous(limits = c(1, 150))
+ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="purple", color = "white") + 
+  scale_x_continuous(limits = c(1, 150)) +
+  plotTheme()
 
 #including segments with 0 crashes
-ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="purple")
+ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="purple", color = "white") +
+  plotTheme()
 ```
 
 ### Zoning data
@@ -931,7 +989,8 @@ VMT_sf <-
 ggplot() +
   geom_sf(data = VMT_sf, aes(fill = VMT_pop)) +
   labs(title = "VMT per population",
-       subtitle = "El Paso, TX")
+       subtitle = "El Paso, TX") +
+  mapTheme()
 
 ```
 
@@ -986,7 +1045,8 @@ tl_roads <- st_read("Data/tl_2018_roads/tl_2018_48141_roads.shp") %>%
 ggplot(tl_roads, aes(y=RTTYP)) +
   geom_bar(width=0.5, color="black", fill = "#FF6666") +
   labs(title = "El Paso,TX Roads by RouteType",
-       subtitle = "TIGER/Line 2018")
+       subtitle = "TIGER/Line 2018") +
+  plotTheme()
 ```
 
 
