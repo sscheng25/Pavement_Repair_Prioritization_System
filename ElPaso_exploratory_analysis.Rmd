@@ -345,7 +345,15 @@ for (i in 1:nrow(EP_age_long_nototal)) {
   }
 }
 
-unique(EP_age_long_nototal$variable)
+# Another attempt, still failed
+EP_age_long <- EP_age_long %>%
+  dplyr::mutate(pop = 
+                  case_when(
+                    str_detect(Sex, "Male") ~ substr(variable, 12, 99)[1],
+                    str_detect(Sex, "Female") ~ substr(variable, 14, 99)[1]))
+glimpse(EP_age_long)
+
+unique(EP_age_long_nototal$pop)
 
 pop_pyramid <-
   EP_age_long_nototal %>%
