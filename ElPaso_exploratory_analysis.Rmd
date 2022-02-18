@@ -124,12 +124,12 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
- source("Jenna.R")
+#source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-#source("Kristin.R")
+source("Kristin.R")
 ```
 
 ```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
@@ -209,7 +209,7 @@ El_Paso_city <-
 ACSvar <- load_variables(year = 2019, dataset = "acs5", cache = TRUE)
 
 #loading race data by tract - use E variables for estimate values
-EP_race <-
+EP_race_county <-
   get_acs(geography = "tract",
           variables = c("B01003_001E", #total_pop
                         "B02001_002E", #white alone
@@ -222,7 +222,7 @@ EP_race <-
           year = 2019,
           state = 48,      # 48 for Texas
           geometry = TRUE,
-          county = 141,    # 141 for El Paso county
+          county = 141, # 141 for El Paso county
           output = "wide") %>%
   rename(total_pop =  B01003_001E,
          white = B02001_002E,
@@ -241,8 +241,14 @@ EP_race <-
          pctOther = other/total_pop*100,
          pctTwo_plus = two_plus/total_pop*100)
 
+#clip to city bound
+EP_race_county <- EP_race_county  %>%
+  st_transform('ESRI:102339')
+
+EP_race <- st_intersection(EP_race_county, El_Paso_city)
+
 #loading ethnicity data by tract - use E variables for estimate values
-EP_ethnicity <-
+EP_ethnicity_county <-
   get_acs(geography = "tract",
           variables = c("B01003_001E", #total_pop
                         "B03001_002E", #not hispanic or latino
@@ -258,6 +264,12 @@ EP_ethnicity <-
   dplyr::select("GEOID","NAME","total_pop","notHL","HL","geometry")%>% #drop MOE columns
   mutate(pctNotHL = notHL/total_pop*100,
          pctHL = HL/total_pop*100)
+
+#clip to city bound
+EP_ethnicity_county <- EP_ethnicity_county  %>%
+  st_transform('ESRI:102339')
+
+EP_ethnicity <- st_intersection(EP_ethnicity_county, El_Paso_city)
 ```
 
 
@@ -271,7 +283,7 @@ ageVar <- ageVar %>% dplyr::select(name)
 ageVar <- as.list(ageVar$name)%>%
   paste0("E")
 
-EP_age <-
+EP_age_county <-
   get_acs(geography = "tract",
           variables = ageVar,
           year = 2019,
@@ -280,6 +292,12 @@ EP_age <-
           county = 141,
           output = "wide")%>%
   dplyr::select("GEOID","NAME",all_of(ageVar),"geometry")
+
+#clip to city bound
+EP_age_county <- EP_age_county %>%
+  st_transform('ESRI:102339')
+
+EP_age <- st_intersection(EP_age_county, El_Paso_city)
 
 ```
 
@@ -415,7 +433,7 @@ ggplot()+
 ## El Paso Socioeconomics (data from 2019 5yr ACS)
 ```{r census data}
 
-EP_econ <-
+EP_econ_county <-
   get_acs(geography = "tract",
           variables = c("B19013_001E", #median household income
                         "B25058_001E", #median rent
@@ -432,6 +450,12 @@ EP_econ <-
          transport_to_work = B08301_001E) %>%
   dplyr::select("GEOID","NAME","total_pop","med_hh_income","med_rent","transport_to_work","geometry")%>% #drop MOE columns
   mutate(pct_transport_to_work = (ifelse(total_pop > 0, transport_to_work / total_pop,0))*100)
+
+#clip to city bound
+EP_econ_county <- EP_econ_county %>%
+  st_transform('ESRI:102339')
+
+EP_econ <- st_intersection(EP_econ_county, El_Paso_city)
 
 ```
 
@@ -680,7 +704,7 @@ zero_PCI_list <-
 ### Remove negative PCIs
 ```{r message=FALSE, warning=FALSE}
 EPCenterline_with_PCI <- EPCenterline_with_PCI %>%
-  dplyr::filter(EPCenterline_new$PCI_2018 > 0)
+  dplyr::filter(EPCenterline_with_PCI $PCI_2018 > 0)
 
 # also use this chunk to clean up the dataframe - remove some of the other columns that we do not need
 ```
@@ -1050,7 +1074,9 @@ ggplot() +
 #when joining in VMT data, EPCenterline_new gets larger. look into this - that's why I duplicated it so we don't overwrite it
 EPCenterline_new2 <- 
   EPCenterline_new %>%
-  st_join(VMT_sf)
+  st_join(VMT_sf)%>%
+  group_by('index')%>%
+  summarize(mean('PCI_2018'))
 
 ```
 
