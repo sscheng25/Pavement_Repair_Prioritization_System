@@ -116,7 +116,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Sisun.R")
+#source("Sisun.R")
 ```
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
@@ -126,7 +126,7 @@ source("Sisun.R")
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-# source("Kristin.R")
+source("Kristin.R")
 ```
 
 ```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
@@ -153,6 +153,10 @@ waze_data <- read_csv("Data/Waze for Cities Data3.csv")
 VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
 
 crash18 <- st_read("Data/CRIS2018/CRIS2018.shp")
+
+roadbed_base <- st_read("Data/Roadbed_Base/Roadbed_Base.shp")
+
+roadbed_surface <- st_read("Data/Roadbed_Surface/Roadbed_Surface.shp")
 
 # Note: The "el_paso_pass2" shapefile is too large for our GitHub repository, so it is read in for each team member using .source() - each person has a source file with local file paths and keys.
 
@@ -920,7 +924,6 @@ crash_centerlines_clean <- crash_centerlines %>%
 ```
 
 ```{r summarizing crashes by centerline}
-#NEED TO FIX THIS CHUNK
 # count crashes per street segment
 crash_groupings <- crash_centerlines_clean %>% 
   group_by(index) %>%
@@ -1057,6 +1060,37 @@ ggplot(tl_roads, aes(y=RTTYP)) +
   plotTheme()
 ```
 
+### Roadbed data
+
+```{r roadbed base material}
+roadbed_base <- roadbed_base %>%
+  st_transform('ESRI:102339')
+
+ggplot(roadbed_base, aes(y=BASE_TYPE_)) +
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "El Paso,TX Roads by Base Material") +
+  plotTheme()
+
+```
+
+```{r roadbed surface material}
+roadbed_surface <- roadbed_surface %>%
+  st_transform('ESRI:102339')
+
+ggplot(roadbed_surface, aes(y=SRFC_TYPE)) +
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "El Paso,TX Roads by Surface Material") +
+  plotTheme()
+```
+
+```{r paved status}
+paved_status <- EPCenterline[c('STATUS','index')]
+
+ggplot(paved_status, aes(y=STATUS)) +
+  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  labs(title = "El Paso,TX Roads by Paved Status") +
+  plotTheme()
+```
 
 ## El Paso Land Cover
 Lots of raster data operations!
@@ -1190,8 +1224,9 @@ ggplot(data = EPcity_landcover_df) +
 numVars <-
   EPCenterline_final %>%
   dplyr::select(potholes_count, waze_count, crash_count, 
-                VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, Res_Year,
-                potholes_len, waze_len, crash_len) %>%
+                #commenting out census variables while census API is down
+                #VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+                Res_Year,potholes_len, waze_len, crash_len) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1217,7 +1252,72 @@ ggcorrplot(
   labs(title = "Correlation Matrix for Numeric Variables") 
 ```
 
+## Categorical Correlations
 
+### RouteType and PCI
 
+```{r routetype pci correlation}
+tl_roads_PCI <- st_join(tl_roads, EPCenterline_with_PCI, join=st_nearest_feature)
+tl_roads_PCI <- tl_roads_PCI[c('index','RTTYP','PCI_2018')]
 
+tl_roads_PCI %>%
+ggplot(aes(RTTYP, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#FF6666") +  
+    labs(title = "RouteType vs. PCI",
+         subtitle = "Dataset: Tiger Line Roads") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
+### Road Class and PCI
+
+```{r class pci correlation}
+class_PCI<- EPCenterline_with_PCI[c('index','CLASS','PCI_2018')]
+
+class_PCI %>%
+ggplot(aes(CLASS, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#FF6666") +  
+    labs(title = "Road Class vs. PCI",
+         subtitle = "Dataset: EPCenterline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Roadbed Base Material and PCI
+
+```{r roadbed base pci correlation}
+roadbed_base_PCI <- st_join(roadbed_base, EPCenterline_with_PCI, join=st_nearest_feature)
+roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
+
+roadbed_base_PCI %>%
+ggplot(aes(BASE_TYPE_, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#FF6666") +  
+    labs(title = "Roadbed Base Material vs. PCI",
+         subtitle = "Dataset: TXDOT Roadbed_Base") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Roadbed Surface Material and PCI
+
+```{r roadbed surface pci correlation}
+roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_with_PCI, join=st_nearest_feature)
+roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
+
+roadbed_surface_PCI %>%
+ggplot(aes(SRFC_TYPE, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#FF6666") +  
+    labs(title = "Roadbed surface Material vs. PCI",
+         subtitle = "Dataset: TXDOT Roadbed_Surface") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Paved Status and PCI
+
+```{r paved status pci correlation}
+paved_PCI<- EPCenterline_with_PCI[c('index','STATUS','PCI_2018')]
+
+paved_PCI %>%
+ggplot(aes(STATUS, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#FF6666") +  
+    labs(title = "Paved Status vs. PCI",
+         subtitle = "Dataset: EPCenterline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
