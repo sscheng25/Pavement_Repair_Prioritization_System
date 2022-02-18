@@ -677,6 +677,14 @@ zero_PCI_list <-
 
 ```
 
+### Remove negative PCIs
+```{r message=FALSE, warning=FALSE}
+EPCenterline_with_PCI <- EPCenterline_with_PCI %>%
+  dplyr::filter(EPCenterline_new$PCI_2018 > 0)
+
+# also use this chunk to clean up the dataframe - remove some of the other columns that we do not need
+```
+
 
 ```{r CIP_layer, message=FALSE, warning=FALSE}
 # glimpse(CIP_layer)
@@ -949,7 +957,7 @@ crash_centerlines_clean <- crash_centerlines %>%
   dplyr::select(Crash_ID, index) %>% st_drop_geometry()
 ```
 
-```{r summarizing crashes by centerline}
+```{r summarizing crashes by centerline, message=FALSE, warning=FALSE}
 # count crashes per street segment
 crash_groupings <- crash_centerlines_clean %>% 
   group_by(index) %>%
@@ -981,7 +989,7 @@ ggplot() +
        subtitle = "El Paso, TX") + mapTheme()
 ```
 
-```{r street centerlines by crash count histogram}
+```{r street centerlines by crash count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_count)) + geom_histogram(fill="#e6a52f", binwidth = 10) + 
   scale_x_continuous(limits = c(1, 150)) +
@@ -1004,9 +1012,11 @@ ggplot() +
 
 ```
 
-### VMT data
 
-```{r VMT data}
+
+### VMT data - KRISTIN to fix to only include El Paso City tracts
+
+```{r VMT data, message=FALSE, warning=FALSE}
 census_geom <-
   EP_econ %>%
   subset(select = c("GEOID","geometry"))
@@ -1070,12 +1080,15 @@ EPCenterline_new3 <-
 
 ## need someone help me look into this dataframe
 ## EPCenterline_final has 76072 rows of data, but the left object (EPCenterline_new) in the left_join below has only 34224 rows
-EPCenterline_index_PCI_ResYear <-
-  EPCenterline_new3 %>%
-              st_drop_geometry() %>%
-              dplyr::select(index, PCI_2018, Res_Year)
+
+## don't need this anymore!
+#EPCenterline_index_PCI_ResYear <-
+#  EPCenterline_new3 %>%
+#              st_drop_geometry() %>%
+#              dplyr::select(index, PCI_2018, Res_Year)
 
 ```
+
 
 
 ### TL_Roads data
@@ -1086,13 +1099,13 @@ tl_roads <- st_read("Data/tl_2018_roads/tl_2018_48141_roads.shp") %>%
   st_transform('ESRI:102339')
 
 ggplot(tl_roads, aes(y=RTTYP)) +
-  geom_bar(width=0.5, color="black", fill = "#FF6666") +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "El Paso,TX Roads by RouteType",
        subtitle = "TIGER/Line 2018") +
   plotTheme()
 ```
 
-### Roadbed data
+### Roadbed data - join to EPCenterline_new here
 
 ```{r roadbed base material}
 roadbed_base <- roadbed_base %>%
@@ -1255,7 +1268,7 @@ ggplot(data = EPcity_landcover_df) +
 ```{r correlation Matrix}
 numVars <-
   EPCenterline_new %>%
-  dplyr::select(potholes_count, waze_count, crash_count, 
+  dplyr::select(#potholes_count, waze_count, crash_count, 
                 #commenting out census variables while census API is down
                 #VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
                 Res_Year,potholes_len, waze_len, crash_len) %>%
@@ -1327,7 +1340,7 @@ ggplot(aes(BASE_TYPE_, PCI_2018)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
 ```
 
-### Roadbed Surface Material and PCI
+### Roadbed Surface Material and PCI - jenna to mess with this plotTheme and wrap the labels
 
 ```{r roadbed surface pci correlation}
 roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_new, join=st_nearest_feature)
@@ -1353,3 +1366,11 @@ ggplot(aes(STATUS, PCI_2018)) +
          subtitle = "Dataset: EPCenterline") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
 ```
+```{r}
+# TO DO EARLIER IN THE RMD - let's combine the PRs with their "parent" categories (major PR should be part of major, etc.)
+EPCenterline_new_classgrp <- EPCenterline_new %>% st_drop_geometry() %>%
+  group_by(CLASS) %>%
+  summarise(count=n())
+
+```
+
