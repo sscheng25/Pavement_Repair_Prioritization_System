@@ -192,7 +192,7 @@ El_Paso_city <-
 
 ```
 
-## 4.2 Importing ACS Data
+## 4.2 Importing Census Data
 
 ### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
@@ -338,17 +338,12 @@ EP_age_long <- EP_age_long %>%
 
 EP_age_long_nototal<-EP_age_long[!(EP_age_long$Sex=="Total" | EP_age_long$variable=="Total_Male_" | EP_age_long$variable=="Total_Female_"),]
 
-
-ggplot(EP_age_long_nototal, aes(x = value, y = variable, fill = Sex)) +
-  geom_col() + plotTheme()
 ```
 
 
-```{r population pyramid}
-
-# why my if statement always TRUE???? But when I print it out, there's TURE and FALSE
+```{r population pyramid, message=TRUE, warning=TRUE}
 for (i in 1:nrow(EP_age_long_nototal)) {
-  if (EP_age_long_nototal$Sex == "Male") {
+  if (EP_age_long_nototal$Sex[i] == "Male") {
     EP_age_long_nototal[i, "variable"] <- substr(EP_age_long_nototal[i, "variable"], 12, 99)[1]
   }
   else {
@@ -356,28 +351,25 @@ for (i in 1:nrow(EP_age_long_nototal)) {
   }
 }
 
-# Another attempt, still failed
-EP_age_long <- EP_age_long %>%
-  dplyr::mutate(pop = 
-                  case_when(
-                    str_detect(Sex, "Male") ~ substr(variable, 12, 99)[1],
-                    str_detect(Sex, "Female") ~ substr(variable, 14, 99)[1]))
-glimpse(EP_age_long)
+pop_pyramid <-
+  EP_age_long_nototal %>%
+  transform(value = as.numeric(value)) %>%
+  group_by(variable, Sex) %>%
+  summarise(value = sum(value))
+pop_pyramid$variable[pop_pyramid$variable == "Under 5 years"] <- "05 years and less"
+pop_pyramid$variable[pop_pyramid$variable == "5 to 9 years"] <- "05 to 9 years"
+pop_pyramid$variable[pop_pyramid$variable == "15 to 17 years" | pop_pyramid$variable == "18 and 19 years"] <- "15 to 19 years"
+pop_pyramid$variable[pop_pyramid$variable == "20 years" | pop_pyramid$variable == "21 years" | pop_pyramid$variable == "22 to 24 years"] <- "20 to 24 years"
+pop_pyramid$variable[pop_pyramid$variable == "60 and 61 years" | pop_pyramid$variable == "62 to 64 years"] <- "60 to 64 years"
+pop_pyramid$variable[pop_pyramid$variable == "65 and 66 years" | pop_pyramid$variable == "67 to 69 years"] <- "65 to 69 years"
 
-unique(EP_age_long_nototal$pop)
-
-#pop_pyramid <-
-#  EP_age_long_nototal %>%
-#  group_by(variable, Sex) %>%
-#  summarise(value = sum(value))
-
-#ggplot(pop_pyramid, aes(x = variable, fill = Sex,
-#                 y = ifelse(test = Sex == "Male",
-#                            yes = -value, no = value))) + 
-#  geom_bar(stat = "identity") +
-#  scale_y_continuous(labels = abs, limits = max(pop_pyramid$value) * c(-1,1)) +
-#  labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
-#  coord_flip()
+ggplot(pop_pyramid, aes(x = variable, fill = Sex,
+                 y = ifelse(test = Sex == "Male",
+                            yes = -value, no = value))) + 
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = abs, limits = max(pop_pyramid$value) * c(-1,1)) +
+  labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
+  coord_flip()
 
 ```
 
