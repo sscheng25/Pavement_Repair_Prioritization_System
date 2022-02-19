@@ -1,0 +1,1371 @@
+---
+title: "Exploratory Data Analysis - El Paso"
+author: "Sisun Cheng, Jenna Epstein, Kristin Chang"
+date: "2022/2/19"
+output:
+  html_document:
+    toc: yes
+    toc_float: TRUE
+    code_folding: hide
+editor_options:
+  chunk_output_type: inline
+---
+# 0. Set Up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = FALSE)
+```
+
+
+```{r libraries, message=FALSE, warning=FALSE, results='hide'}
+library(tidyverse)
+library(sf)
+library(lubridate)
+library(tigris)
+library(tidycensus)
+library(gganimate)
+library(viridis)
+library(riem)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RSocrata)
+library(caret)
+library(purrr)
+library(FNN)
+library(stargazer)
+library(dplyr)
+library(spatstat)
+library(raster)
+library(spdep)
+library(grid)
+library(mapview)
+library(stringr)
+library(ggcorrplot)
+
+library(colorspace)
+library(rgdal)          
+library(RColorBrewer) 
+library(rasterVis)    
+library(sp)
+
+
+palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
+palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
+
+```
+
+
+```{r add plot and map themes for default visualizations, message=FALSE, warning=FALSE}
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.text.x = element_text(size = 14))
+}
+
+plotTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle = element_text(face="italic"),
+    plot.caption = element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line("grey80", size = 0.1),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.background = element_rect(fill = "grey80", color = "white"),
+    strip.text = element_text(size=12),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10),
+    plot.background = element_blank(),
+    legend.background = element_blank(),
+    legend.title = element_text(colour = "black", face = "italic"),
+    legend.text = element_text(colour = "black", face = "italic"),
+    strip.text.x = element_text(size = 14)
+  )
+}
+
+```
+
+
+```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
+# UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
+source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
+```
+
+
+```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
+# UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
+#source("Jenna.R")
+```
+
+
+```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
+# UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
+# source("Kristin.R")
+```
+
+# 1. Project Introduction
+
+
+
+# 2. Use Case
+
+
+
+# 3. Road Research
+
+
+
+# 4. Exploratory Data Analysis
+
+## 4.1 Importing Local Data
+
+```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
+# Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4203).
+CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
+  st_transform('ESRI:102339')
+
+centerline_with_age <- st_read("Data/PCI_Study/Centerline_with_Age.shp") %>%
+  st_transform('ESRI:102339')
+
+EPCenterline <- st_read("Data/Penn/EPCenterline.shp") %>%
+  st_transform('ESRI:102339')
+
+zoning <- st_read("Data/Penn/Zoning.shp") %>%
+  st_transform('ESRI:102339')
+
+# Saved as .csv from file 'POTHOLES2013_2021.xls'
+potholes <- read_csv("Data/POTHOLES2013_2021.csv")
+
+# Sheet 'Waze for Cities Data _ Key Aler' saved as .csv from file 'Waze for Cities Data _ Key Alerts Dashboard_Traffic Alerts_Table.xlsx'
+waze_data <- read_csv("Data/Waze for Cities Data3.csv")
+
+VMT <- read_csv("Data/ElPaso_VMT_res_bg.csv")
+
+crash18 <- st_read("Data/CRIS2018/CRIS2018.shp")
+
+roadbed_base <- st_read("Data/Roadbed_Base/Roadbed_Base.shp")
+
+roadbed_surface <- st_read("Data/Roadbed_Surface/Roadbed_Surface.shp")
+
+# Note: The "el_paso_pass2" shapefile is too large for our GitHub repository, so it is read in for each team member using .source() - each person has a source file with local file paths and keys.
+
+#comparing TIGER/Line shapefile to the street centerlines shapefile from Alex
+tl_roads <- st_read("Data/tl_2018_roads/tl_2018_48141_roads.shp") %>%
+  st_transform('ESRI:102339')
+
+EPcity_landcover <-
+  raster("Data/Data_NLCD/ElPasoArea_LandCover_ImperviousCover/NLCD_2019_Land_Cover_L48_20210604_hHjclStONh9yCsFQkZ5z.tiff")
+
+```
+
+Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa).
+
+```{r boundary data of El Paso county and city, message=FALSE, warning=FALSE, results='hide'}
+texas <-
+  st_read("Data/TexasCountiesMap.geojson")
+
+# County Level
+El_Paso <-
+  texas %>%
+  filter(name=='El Paso') %>%
+  st_as_sf(coords = the_geom.coordinates, crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+# City Level
+El_Paso_city <-
+  st_read("Data/TxDOT_City_Boundaries.geojson") %>%
+  filter(CITY_NM=='El Paso') %>%
+  st_transform('ESRI:102339')
+
+```
+
+## 4.2 Importing ACS Data
+
+### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
+
+```{r census_demographics}
+# census data
+
+#variable list for ACS 2019 5 year data
+ACSvar <- load_variables(year = 2019, dataset = "acs5", cache = TRUE)
+
+#loading race data by tract - use E variables for estimate values
+EP_race_county <-
+  get_acs(geography = "tract",
+          variables = c("B01003_001E", #total_pop
+                        "B02001_002E", #white alone
+                        "B02001_003E", #black or african american
+                        "B02001_004E", #american indian or alaska native
+                        "B02001_005E", #asian alone
+                        "B02001_006E", #native hawaiian or pacific islander
+                        "B02001_007E", #some other race
+                        "B02001_008E"), #two or more races
+          year = 2019,
+          state = 48,      # 48 for Texas
+          geometry = TRUE,
+          county = 141, # 141 for El Paso county
+          output = "wide") %>%
+  rename(total_pop =  B01003_001E,
+         white = B02001_002E,
+         black = B02001_003E,
+         NAT = B02001_004E,
+         asian = B02001_005E,
+         PI = B02001_006E,
+         other = B02001_007E,
+         two_plus = B02001_008E) %>%
+  dplyr::select("GEOID","NAME","total_pop","white","black","NAT","asian","PI","other","two_plus","geometry")%>% #drop MOE columns
+  mutate(pctWhite = white/total_pop*100,
+         pctBlack = black/total_pop*100,
+         pctNAT = NAT/total_pop*100,
+         pctAsian = asian/total_pop*100,
+         pctPI = PI/total_pop*100,
+         pctOther = other/total_pop*100,
+         pctTwo_plus = two_plus/total_pop*100)
+
+#clip to city bound
+EP_race_county <- EP_race_county  %>%
+  st_transform('ESRI:102339')
+
+EP_race <- st_intersection(EP_race_county, El_Paso_city)
+
+#loading ethnicity data by tract - use E variables for estimate values
+EP_ethnicity_county <-
+  get_acs(geography = "tract",
+          variables = c("B01003_001E", #total_pop
+                        "B03001_002E", #not hispanic or latino
+                        "B03001_003E"), #hispanic or latino
+          year = 2019,
+          state = 48,
+          geometry = TRUE,
+          county = 141,
+          output = "wide") %>%
+  rename(total_pop =  B01003_001E,
+         notHL = B03001_002E,
+         HL = B03001_003E) %>%
+  dplyr::select("GEOID","NAME","total_pop","notHL","HL","geometry")%>% #drop MOE columns
+  mutate(pctNotHL = notHL/total_pop*100,
+         pctHL = HL/total_pop*100)
+
+#clip to city bound
+EP_ethnicity_county <- EP_ethnicity_county  %>%
+  st_transform('ESRI:102339')
+
+EP_ethnicity <- st_intersection(EP_ethnicity_county, El_Paso_city)
+```
+
+
+```{r census_demographics_age}
+#loading age data by tract - use E variables for estimate values
+ageVar <- ACSvar %>%
+  filter(concept=="SEX BY AGE")
+
+ageVar <- ageVar %>% dplyr::select(name)
+
+ageVar <- as.list(ageVar$name)%>%
+  paste0("E")
+
+EP_age_county <-
+  get_acs(geography = "tract",
+          variables = ageVar,
+          year = 2019,
+          state = 48,
+          geometry = TRUE,
+          county = 141,
+          output = "wide")%>%
+  dplyr::select("GEOID","NAME",all_of(ageVar),"geometry")
+
+#clip to city bound
+EP_age_county <- EP_age_county %>%
+  st_transform('ESRI:102339')
+
+EP_age <- st_intersection(EP_age_county, El_Paso_city)
+
+```
+
+
+```{r census_age_var_labels}
+ageVarLabels <- ACSvar %>%
+  filter(concept=="SEX BY AGE")
+
+ageVarLabels <- ageVarLabels %>% dplyr::select(name,label)
+
+ageVarLabels$name <- ageVarLabels$name %>%
+  paste0("E")
+
+ageVarLabels$label <-gsub("!!", "", as.character(ageVarLabels$label))
+ageVarLabels$label <-gsub("Estimate", "", as.character(ageVarLabels$label))
+ageVarLabels$label <-gsub(":", "_", as.character(ageVarLabels$label))
+
+
+ageVarLabels <- ageVarLabels %>% dplyr::rename(VAR_NAME = name)
+ageVarLabels <- ageVarLabels %>% dplyr::rename(LABEL = label)
+
+```
+
+
+```{r census_age_var_rename_match, message=FALSE, warning=FALSE}
+EP_age_new <- EP_age %>%
+      rename_at(as.vector(na.omit(ageVarLabels$VAR_NAME[match(names(EP_age), ageVarLabels$VAR_NAME)])),
+               ~as.vector(na.omit(ageVarLabels$LABEL[match(names(EP_age), ageVarLabels$VAR_NAME)])))
+```
+
+
+```{r census_demo_age_charts, message=FALSE, warning=FALSE}
+# transform data to long
+EP_age_long <- EP_age_new%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+# new column for sex
+EP_age_long <- EP_age_long %>%
+  dplyr::mutate(Sex=
+                  case_when(
+                    str_detect(EP_age_long$variable, "Male") ~ "Male",
+                    str_detect(EP_age_long$variable, "Female") ~ "Female",
+                        TRUE ~ "Total"))
+
+EP_age_long_nototal<-EP_age_long[!(EP_age_long$Sex=="Total" | EP_age_long$variable=="Total_Male_" | EP_age_long$variable=="Total_Female_"),]
+
+
+ggplot(EP_age_long_nototal, aes(x = value, y = variable, fill = Sex)) +
+  geom_col() + plotTheme()
+```
+
+
+```{r population pyramid}
+
+# why my if statement always TRUE???? But when I print it out, there's TURE and FALSE
+for (i in 1:nrow(EP_age_long_nototal)) {
+  if (EP_age_long_nototal$Sex == "Male") {
+    EP_age_long_nototal[i, "variable"] <- substr(EP_age_long_nototal[i, "variable"], 12, 99)[1]
+  }
+  else {
+    EP_age_long_nototal[i, "variable"] <- substr(EP_age_long_nototal[i, "variable"], 14, 99)[1]
+  }
+}
+
+# Another attempt, still failed
+EP_age_long <- EP_age_long %>%
+  dplyr::mutate(pop = 
+                  case_when(
+                    str_detect(Sex, "Male") ~ substr(variable, 12, 99)[1],
+                    str_detect(Sex, "Female") ~ substr(variable, 14, 99)[1]))
+glimpse(EP_age_long)
+
+unique(EP_age_long_nototal$pop)
+
+#pop_pyramid <-
+#  EP_age_long_nototal %>%
+#  group_by(variable, Sex) %>%
+#  summarise(value = sum(value))
+
+#ggplot(pop_pyramid, aes(x = variable, fill = Sex,
+#                 y = ifelse(test = Sex == "Male",
+#                            yes = -value, no = value))) + 
+#  geom_bar(stat = "identity") +
+#  scale_y_continuous(labels = abs, limits = max(pop_pyramid$value) * c(-1,1)) +
+#  labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
+#  coord_flip()
+
+```
+
+
+```{r census_demo_maps}
+#plotting census demographics data
+#race map
+
+race_long <- EP_race%>%
+  dplyr::select(GEOID,NAME, pctWhite, pctBlack, pctNAT, pctAsian, pctPI, pctOther, pctTwo_plus)%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+race_vars <- unique(race_long$variable)
+mapList <- list()
+
+for(i in race_vars){
+  mapList[[i]] <-
+    ggplot() +
+      geom_sf(data = filter(race_long, variable == i), aes(fill=value), colour=NA) +
+      scale_fill_viridis(name="") +
+      labs(title=i) +
+      mapTheme()}
+
+do.call(grid.arrange,c(mapList, ncol = 4, top = "Race by Census Tract"))
+
+```
+
+```{r census_demo_maps2}
+#ethnicity map - Hispanic or Latino
+ggplot()+
+  geom_sf(data=EP_ethnicity, aes(fill=pctHL))+
+  scale_fill_viridis()+
+  labs(title="Percent Hispanic or Latino in 2019",
+       subtitle="Census Tracts in El Paso, TX",
+       caption = "Source: US Census, ACS 2019") + mapTheme()
+
+```
+
+### 4.2.2 El Paso Socioeconomics (data from 2019 5yr ACS)
+
+```{r census data, Socioeconomics}
+
+EP_econ_county <-
+  get_acs(geography = "tract",
+          variables = c("B19013_001E", #median household income
+                        "B25058_001E", #median rent
+                        "B08301_001E", #people who have means of transportation to work
+                        "B01003_001E"), #total pop
+          year = 2019,
+          state = 48,      # 48 for Texas
+          geometry = TRUE,
+          county = 141,    # 141 for El Paso county
+          output = "wide") %>%
+  rename(total_pop =  B01003_001E,
+         med_hh_income = B19013_001E,
+         med_rent = B25058_001E,
+         transport_to_work = B08301_001E) %>%
+  dplyr::select("GEOID","NAME","total_pop","med_hh_income","med_rent","transport_to_work","geometry")%>% #drop MOE columns
+  mutate(pct_transport_to_work = (ifelse(total_pop > 0, transport_to_work / total_pop,0))*100)
+
+#clip to city bound
+EP_econ_county <- EP_econ_county %>%
+  st_transform('ESRI:102339')
+
+EP_econ <- st_intersection(EP_econ_county, El_Paso_city)
+
+```
+
+
+```{r census_socioecon_maps, message=FALSE, warning=FALSE}
+econ_long <- EP_econ%>%
+  dplyr::select(GEOID,NAME, med_hh_income, med_rent, pct_transport_to_work)%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+econ_vars <- unique(econ_long$variable)
+mapList_econ <- list()
+
+for(i in econ_vars){
+  mapList_econ[[i]] <-
+    ggplot() +
+      geom_sf(data = filter(econ_long, variable == i), aes(fill=value), colour=NA) +
+      scale_fill_viridis(name="") +
+      labs(title=i) + mapTheme()
+      }
+
+do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Select Socioeconomics by Census Tract", bottom = "Source: US Census, ACS 2019"))
+```
+
+
+```{r census_socioecon_transport_map, message=FALSE, warning=FALSE}
+#pct transport to work map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=pct_transport_to_work))+
+  scale_fill_viridis()+
+  labs(title="Percent Population with Transportation to Work in 2019",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
+
+
+```{r census_socioecon_medhhinc_map, message=FALSE, warning=FALSE}
+#median household inc map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=med_hh_income))+
+  scale_fill_viridis()+
+  labs(title="Median Household Income 2019",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
+
+
+```{r census_socioecon_medrent_map, message=FALSE, warning=FALSE}
+#median rent map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=med_rent))+
+  scale_fill_viridis()+
+  labs(title="Median Rent ($) 2019",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
+
+## 4.3 Data Wrangling and Feature Engineering
+
+### 4.3.1 Data Wrangling on Centerline-related datasets
+
+#### Centerline and PCI exploration
+
+```{r EP centerlines, message=FALSE, warning=FALSE}
+# delete duplicated "LOCAL" class
+EPCenterline$CLASS[EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n" | EPCenterline$CLASS == "LOCAL\r\n" | EPCenterline$CLASS == "LOCAL\r\n\r\n\r\n"] <- "LOCAL"
+
+EPCenterline$CLASS[EPCenterline$CLASS == "MAJOR PR"] <- "MAJOR"
+EPCenterline$CLASS[EPCenterline$CLASS == "MINOR PR"] <- "MINOR"
+EPCenterline$CLASS[EPCenterline$CLASS == "COLLECTOR PR"] <- "COLLECTOR"
+# unique(EPCenterline$CLASS)
+
+# remove some unneeded columns
+# subset centerline data to El Paso city maintained segments
+# Clip to el paso city boundary
+EPCenterline <-
+  EPCenterline %>%
+  dplyr::select(-POD_ALIAS1, -POD_ALIAS2, -POD_ALIAS3, -POD_ALIAS4, -STS_ALIAS4 , -STN_ALIAS4, -PRD_ALIAS4 , -STS_ALIAS3, -PRD_ALIAS3, -STS_ALIAS2, -PRD_ALIAS2, -STS_ALIAS1, -PRD_ALIAS1, -STR, -STL, -ESNL, -ESNR) %>%
+  subset(MUNR == 'CITY OF EL PASO') %>%
+  st_intersection(El_Paso_city, EPCenterline) %>%
+  subset(CLASS == "LOCAL" | CLASS == "MINOR" | CLASS == "MAJOR" | CLASS == "COLLECTOR" | CLASS == "MINOR PR" | CLASS == "COLLECTOR PR" | CLASS == "MAJOR PR" ) 
+
+unique(EPCenterline$CLASS)
+
+ggplot() +
+  geom_sf(data = EPCenterline, aes(color = CLASS)) +
+  labs(title = "Centerlines by Class",
+       subtitle = "El Paso, TX") + mapTheme()
+
+# unique(EPCenterline$CLASS)
+ggplot(EPCenterline, aes(y=CLASS)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Pavement Centerline Counts by Class",
+       subtitle = "El Paso, TX") + plotTheme()
+
+```
+
+
+```{r prepare centerline data with PCI values from 2018}
+#join with centerline with age so we can include PCI info
+EPCenterline_with_PCI <-
+  EPCenterline %>%
+  st_join(centerline_with_age)
+
+# create an index so that each segment has a unique id
+EPCenterline_with_PCI$index <- 1:nrow(EPCenterline_with_PCI)
+
+EPCenterline_with_PCI <- 
+  EPCenterline_with_PCI %>%
+  subset(MUNR == 'CITY OF EL PASO') %>%
+  st_intersection(El_Paso_city, EPCenterline_with_PCI)
+
+# pavement length
+EPCenterline_with_PCI <- 
+  EPCenterline_with_PCI %>%
+  mutate(pave_length = st_length(geometry))
+```
+
+
+```{r explore centerline data with PCI values from 2018 with visuals, message=FALSE, warning=FALSE}
+ggplot(EPCenterline_with_PCI, aes(y=CLASS)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Pavement Centerlines by Class",
+       subtitle = "El Paso, TX") + plotTheme()
+
+ggplot(EPCenterline_with_PCI, aes(y=STATUS)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Pavement Centerlines by Status",
+       subtitle = "El Paso, TX") + plotTheme()
+
+class_PCI <-
+  EPCenterline_with_PCI %>%
+  subset(STATUS == 'PAVED') %>%
+  st_drop_geometry() %>%
+  drop_na(PCI_2018) %>%
+  group_by(CLASS) %>%
+  summarise(PCI=mean(PCI_2018))
+
+ggplot(class_PCI, aes(x=PCI, y=CLASS)) + 
+  geom_bar(stat = "identity", color="black", fill = "#08519c") +
+  labs(title = "Average PCI Value by Class",
+       subtitle = "El Paso, TX") + plotTheme()
+
+plan_area_PCI <-
+  EPCenterline_with_PCI %>%
+  st_drop_geometry() %>%
+  subset(STATUS == 'PAVED') %>%
+  drop_na(PCI_2018) %>%
+  drop_na(PLANAREA) %>%
+  group_by(PLANAREA) %>%
+  summarise(PCI=mean(PCI_2018))
+
+ggplot(plan_area_PCI, aes(x=PCI, y=PLANAREA)) + 
+  geom_bar(stat = "identity", color="black", fill = "#08519c") +
+  labs(title = "Average PCI Value by Planning Area",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+
+```{r centerline data with MUNR City of El Paso, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = El_Paso_city, color="grey") +
+  geom_sf(data = EPCenterline_with_PCI %>%
+            subset(MUNR == 'CITY OF EL PASO'), colour="#08519c") +
+  labs(title = "Centerlines within CITY OF EL PASO",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+
+```{r centerline with pci, message=FALSE, warning=FALSE}
+# glimpse(centerline_with_age)
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="#525252") +
+  geom_sf(data = EPCenterline_with_PCI, aes(color = PCI_2018)) +
+  scale_colour_gradient(low = "#eff3ff", high = "#08519c")+
+  labs(title = "Centerlines with PCI Value of 2018",
+       subtitle = "El Paso, TX") + mapTheme()
+
+# unique(center_line$PCI_2018)
+ggplot(EPCenterline_with_PCI, aes(y=PCI_2018)) +
+  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
+  labs(title = "PCI Distribution",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+
+```{r pavements with negative PCIs, message=FALSE, warning=FALSE}
+negative_PCI_list <-
+  EPCenterline_with_PCI %>%
+  subset(PCI_2018 < 0)
+
+unique(negative_PCI_list$PCI_2018)
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="#525252") +
+  geom_sf(data = negative_PCI_list, aes(color = PCI_2018)) +
+  labs(title = "Centerlines with Negative PCIs",
+       subtitle = "El Paso, TX") +mapTheme()
+
+# Remove negative PCIs
+EPCenterline_with_PCI <- EPCenterline_with_PCI %>%
+  dplyr::filter(EPCenterline_with_PCI$PCI_2018 > 0)
+
+ggplot(EPCenterline_with_PCI, aes(y=PCI_2018)) +
+  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
+  labs(title = "PCI Distribution (Negatives excluded)",
+       subtitle = "El Paso, TX") + plotTheme()
+
+# Remove unused columns
+EPCenterline_with_PCI <-
+  EPCenterline_with_PCI %>%
+  dplyr::select(index, STREETNAME.x, STREETNAME.y, STYPE, CLASS, 
+                MUNR, PLANAREA, STS, DLU, STATUS, 
+                RoadLevel, PAVEMENT_Y, New_Width,
+                SURFTYPE, PCI_2018, DISTRICT, Res_Year, Max_YEAR_F, 
+                geometry, pave_length) %>%
+  rename(StreetName_EP = STREETNAME.x, StreetName_Age = STREETNAME.y)
+
+```
+
+#### Waze jam data exploration
+
+```{r process the waze data 1, message=FALSE, warning=FALSE}
+x_fin <- data.frame()
+y_fin <- data.frame()
+
+for (i in waze_data$Location) {
+  pattern1 <- "Point(.*?) "
+  pattern2 <- " (.*?))"
+
+  x_coor <- regmatches(i, regexec(pattern1, i))
+  x_temp <- x_coor[[1]][2] %>%
+    substr(start=2, stop=99)
+  #print(x_temp)
+  x_fin <- rbind(x_fin, x_temp)
+  y_coor <- regmatches(i, regexec(pattern2, i))
+  y_temp <- y_coor[[1]][2]
+  y_fin <- rbind(y_fin, y_temp)
+}
+
+x_fin$x_coor <- x_fin$X..106.598471.
+y_fin$y_coor <- y_fin$X.31.911973.
+waze_data$x_coor <- x_fin$x_coor
+waze_data$y_coor <- y_fin$y_coor
+```
+
+
+```{r process waze jam data 2, message=FALSE, warning=FALSE}
+waze_sf <-
+  waze_data %>%
+  st_as_sf(coords = c("x_coor", "y_coor"), crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+ggplot() +
+  geom_sf(data = El_Paso_city, color="grey") +
+  geom_sf(data = waze_sf, aes(colour=Subtype), size=0.5, show.legend = "point") +
+  labs(title = "Waze Jam Data Points by Subtype",
+       subtitle = "El Paso, TX") + mapTheme()
+
+ggplot(waze_sf, aes(y=Subtype)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Waze Jams Count by Subtype",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+
+```{r waze data NAs, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = El_Paso_city, color="grey") +
+  geom_sf(data = waze_sf %>%
+            subset(is.na(Subtype)), color = "#e76420", size=0.5, show.legend = "point") +
+  labs(title = "Waze Jam Data Points with NA Subtype",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+#### Potholes data exploration
+
+```{r process pot holes data to sf, message=FALSE, warning=FALSE}
+potholes_sf <-
+  potholes %>%
+  subset(WORKORDERID!=588771) %>%
+  na.omit() %>%
+  st_as_sf(coords = c("WOXCOORDINATE", "WOYCOORDINATE"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+```
+
+
+```{r grouping pot holes data by year 1, message=FALSE, warning=FALSE}
+potholes_sf$YEAR <- format(mdy_hms(potholes_sf$ACTUALFINISHDATE), format='%Y')
+glimpse(potholes_sf)
+
+potholes_sf <-
+  potholes_sf %>%
+  subset(YEAR != 1900)
+
+potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
+
+```
+
+
+```{r grouping pot holes data by year 2, message=FALSE, warning=FALSE}
+# new sf with last five years of points data only for easier legibility on maps
+potholes_sf_2016to2018 <- potholes_sf %>% subset(YEAR > 2015 & YEAR < 2019)
+potholes_sf_2019to2021 <- potholes_sf %>% subset(YEAR > 2018)
+potholes_sf_2018 <- potholes_sf %>% subset(YEAR == 2018)
+```
+
+
+```{r 2018 streets and potholes map, message=FALSE, warning=FALSE}
+# 2018 potholes map
+ggplot() +
+  geom_sf(data=EPCenterline, color="#585858", alpha=0.8) +
+  geom_sf(data = potholes_sf_2018, size=0.2, color="#08519c", alpha=0.2) +
+  geom_sf(data = El_Paso_city, fill="transparent", color="#525252") +
+  guides(fill="legend")+
+  labs(title = "Potholes and Centerlines in 2018",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+
+```{r lots of potholes maps, message=FALSE, warning=FALSE}
+# 2016-2018 map
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="grey") +
+  geom_sf(data = potholes_sf_2016to2018, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  labs(title = "Potholes in 2016-2018",
+       subtitle = "El Paso, TX") + mapTheme()
+
+#  2019-2021 map
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="grey") +
+  geom_sf(data = potholes_sf_2019to2021, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  labs(title = "Potholes in 2019-2021",
+       subtitle = "El Paso, TX") + mapTheme()
+
+ggplot(potholes_sf, aes(y=YEAR)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Year of pot holes repairment",
+       subtitle = "El Paso, TX") + plotTheme()
+
+```
+
+
+```{r centerline buffer and potholes work}
+#create centerline buffer of 24ft and centerline buffer
+EPCenterline_buffer <- st_buffer(EPCenterline_with_PCI, dist=24) %>% st_as_sf()
+
+#join potholes to EPCenterline_buffer using nearest feature
+potholes_centerlines <-  st_join(potholes_sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+potholes_centerlines_clean <- potholes_centerlines %>%
+  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
+```
+
+### 4.3.2 Visualzations
+
+#### Road data Visualization
+
+```{r tl_roads_data}
+ggplot(tl_roads, aes(y=RTTYP)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Roads by RouteType",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+```
+
+#### CIP related Centerlines Visualization
+
+```{r CIP_layer, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = CIP_layer, aes(color = PCI)) +
+   scale_colour_gradient(low = "#eff3ff", high = "#08519c")+
+  labs(title = "Capital Improvement Program (CIP) related Centerlines with PCIs",
+       subtitle = "El Paso, TX") + mapTheme()
+
+
+```
+
+#### El Paso pass visualization
+
+```{r elpaso_pass, message=FALSE, warning=FALSE}
+# glimpse(elpaso_pass)
+
+ggplot() +
+  geom_sf(data = elpaso_pass, color = "#525252") +
+  labs(title = "El Paso Pass Data Layer",
+       subtitle = "El Paso, TX") +
+  mapTheme()
+
+ggplot(elpaso_pass, aes(y=pci_2018)) +
+  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
+  labs(title = "PCI distribution of El Paso Pass Data Layer",
+       subtitle = "El Paso, TX") +
+  plotTheme()
+```
+
+#### Zoning data Visualization
+
+```{r zoning map, message=FALSE, warning=FALSE}
+
+ggplot() +
+  geom_sf(data = zoning, fill="transparent") +
+  labs(title = "City Zoning",
+       subtitle = "El Paso, TX") + mapTheme()
+
+```
+
+### 4.3.3 Land Cover Exploration
+Lots of raster data operations!
+
+```{r read in el paso city land cover raster}
+# plot to see the land cover data
+plot(EPcity_landcover)
+```
+
+
+```{r reproject raster}
+EPcity_landcover_reproject <- projectRaster(EPcity_landcover,
+                                       crs = crs(El_Paso_city))
+```
+
+
+```{r crop and mask raster}
+# Crop raster data by extent of state subset
+EPcity_landcover_crop <- crop(EPcity_landcover_reproject, extent(El_Paso_city))
+
+# Identify those pixels in raster that lie within the borders of the given shp. Use the 'mask' function for that.
+
+EPcity_landcover_crop <- mask(EPcity_landcover_crop, El_Paso_city)
+plot(EPcity_landcover_crop)
+
+```
+
+
+```{r create function for converting raster to df, message=FALSE, warning=FALSE}
+rasterdf <- function(x, aggregate = 1) {
+  resampleFactor <- aggregate        
+  inputRaster <- x    
+  inCols <- ncol(inputRaster)
+  inRows <- nrow(inputRaster)
+  # Compute numbers of columns and rows in the new raster for mapping
+  resampledRaster <- raster(ncol=(inCols / resampleFactor), 
+                            nrow=(inRows / resampleFactor))
+  # Match to the extent of the original raster
+  extent(resampledRaster) <- extent(inputRaster)
+  # Resample data on the new raster
+  y <- resample(inputRaster,resampledRaster,method='ngb')
+
+  # Extract cell coordinates into a data frame
+  coords <- xyFromCell(y, seq_len(ncell(y)))
+  # Extract layer names
+  dat <- stack(as.data.frame(getValues(y)))
+  # Add names - 'value' for data, 'variable' to indicate different raster layers
+  # in a stack
+  names(dat) <- c('value', 'variable')
+  dat <- cbind(coords, dat)
+  dat
+}
+
+```
+
+
+```{r convert NLCD raster to df}
+# convert to df
+EPcity_landcover_df <- rasterdf(EPcity_landcover_crop)
+EPcity_landcover_df
+```
+
+
+```{r map codes to names and pull colors from TIFF legend, message=FALSE, warning=FALSE}
+LCcodes <- c(11,12,21,22,23,24,31,41,42,43,52,71,81,82,90,95)
+
+LCnames <-c(
+  "Water",
+  "IceSnow",
+  "DevelopedOpen",
+  "DevelopedLow",
+  "DevelopedMed",
+  "DevelopedHigh",
+  "Barren",
+  "DeciduousForest",
+  "EvergreenForest",
+  "MixedForest",
+  "ShrubScrub",
+  "GrassHerbaceous",
+  "PastureHay",
+  "CultCrops",
+  "WoodyWetlands",
+  "EmergentHerbWet")
+
+LCcolors <- attr(EPcity_landcover, "legend")@colortable[LCcodes + 1]
+names(LCcolors) <- as.character(LCcodes)
+LCcolors
+
+```
+
+
+```{r map the final land cover raster, message=FALSE, warning=FALSE}
+ggplot(data = EPcity_landcover_df) +
+  geom_raster(aes(x = x, y = y, fill = as.character(value))) + 
+  scale_fill_manual(name = "Land cover",
+                    values = LCcolors,
+                    labels = LCnames[-2],
+                    na.translate = FALSE) +
+  coord_sf(expand = F) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "black")) + 
+  labs(title = "Land Cover",
+       subtitle = "El Paso,TX") +
+  mapTheme()
+
+```
+
+
+```{r map land cover and roads with PCI}
+ggplot(data = EPcity_landcover_df) +
+  geom_raster(aes(x = x, y = y, fill = as.character(value))) + 
+  scale_fill_manual(name = "Land cover",
+                    values = LCcolors,
+                    labels = LCnames[-2],
+                    na.translate = FALSE) +
+  coord_sf(expand = F) +
+    geom_sf(data = centerline_with_age, aes(color = PCI_2018)) +
+  scale_color_viridis(direction=-1)+
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) + 
+  labs(title = "Land Cover with Centerlines and PCIs",
+       subtitle = "El Paso,TX") +
+  mapTheme()
+
+
+```
+
+
+## 4.4 Joining Data Together
+
+### 4.4.1 Potholes Data
+
+```{r potholes per street segment and merging back with centerline data}
+# count potholes per street segment
+potholes_groupings <- potholes_centerlines_clean %>% 
+  group_by(index) %>%
+  summarize(potholes_count=n())
+
+#then join back to initial EPCenterline using index as the ID
+EPCenterline_new <- merge(EPCenterline_with_PCI, potholes_groupings, by = "index", all.x=TRUE)
+
+#replace NAs in potholes count column with 0
+EPCenterline_new$potholes_count[is.na(EPCenterline_new$potholes_count)] <- 0
+
+# calculate potholes per 100 meters
+EPCenterline_new <-
+  EPCenterline_new %>%
+  mutate(potholes_len = (potholes_count*100)/pave_length)
+
+# convert to numeric
+EPCenterline_new$potholes_len <- as.numeric(as.character(EPCenterline_new$potholes_len))
+
+```
+
+
+```{r visualize street centerline segments by potholes count, message=FALSE, warning=FALSE}
+# only mapping when potholes are greater than or equal to 1
+# TO DO - LOG TRANSFORM THE SCALE SO WE CAN BETTER SEE DISTRIBUTION. OR CREATE BINS USING QBR FUNCTION
+ggplot() +
+  geom_sf(data = EPCenterline_new, aes(color = potholes_len), alpha=0.5) +
+  scale_colour_viridis(direction=-1)+
+  labs(title = "Street Centerlines by Number of Potholes",
+       subtitle = "El Paso, TX") + mapTheme()
+
+```
+
+
+```{r street centerlines by pothole count histogram}
+# excluding segments with 0 potholes
+ggplot(EPCenterline_new, aes(x=potholes_count)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
+  labs(title = "Distribution of Potholes Numbers (0 Excluded)",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+
+#including segments with 0 potholes
+ggplot(EPCenterline_new, aes(x=potholes_count)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
+  labs(title = "Distribution of Potholes Numbers",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+
+```
+
+### 4.4.2 Waze Data
+
+```{r join waze data into street buffer}
+#join waze jam data to EPCenterline_buffer using nearest feature
+waze_centerlines <-  st_join(waze_sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+waze_centerlines_clean <- waze_centerlines %>%
+  st_drop_geometry()
+```
+
+
+```{r waze jams per streetsegment and merging back with centerline data}
+# count potholes per street segment
+waze_groupings <- waze_centerlines_clean %>% 
+  group_by(index) %>%
+  summarize(waze_count=n())
+
+#then join back to initial EPCenterline using index as the ID
+EPCenterline_new <- merge(EPCenterline_new, waze_groupings, by = "index", all.x=TRUE)
+
+#replace NAs in potholes count column with 0
+EPCenterline_new$waze_count[is.na(EPCenterline_new$waze_count)] <- 0
+
+# calculate waze jams per 100 meters
+EPCenterline_new <-
+  EPCenterline_new %>%
+  mutate(waze_len = waze_count*100/pave_length)
+
+# convert to numeric
+EPCenterline_new$waze_len <- as.numeric(as.character(EPCenterline_new$waze_len))
+
+```
+
+### 4.4.3 Crash Data
+
+```{r join crashes to centerlines}
+#replace 0s in lat long columns with NA so we can omit
+crash18_trim<-crash18[!(crash18$Latitude==0 | crash18$Longitude==0),]
+
+
+#transforming to our crs
+crash18_sf <- crash18_trim %>%
+  na.omit() %>%
+  st_as_sf(coords = c("Latitude", "Longitude"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+#join crashes to EPCenterline_buffer using nearest feature
+crash_centerlines <-  st_join(crash18_sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+crash_centerlines_clean <- crash_centerlines %>%
+  dplyr::select(Crash_ID, index) %>% st_drop_geometry()
+```
+
+
+```{r summarizing crashes by centerline, message=FALSE, warning=FALSE}
+# count crashes per street segment
+crash_groupings <- crash_centerlines_clean %>% 
+  group_by(index) %>%
+  summarize(crash_count=n())
+
+#then join back to initial EPCenterline using index as the ID
+EPCenterline_new <- merge(EPCenterline_new, crash_groupings, by = "index", all.x=TRUE)
+
+#replace NAs in crash count column with 0
+EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
+
+# calculate crahs per 100 meters
+EPCenterline_new <-
+  EPCenterline_new %>%
+  mutate(crash_len = crash_count*100/pave_length)
+
+
+# convert to numeric
+EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len))
+```
+
+
+```{r visualize street centerline segments by crash count, message=FALSE, warning=FALSE}
+# only mapping when crashes are greater than or equal to 1
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
+  geom_sf(data = EPCenterline_new , aes(color = crash_count)) +
+  scale_color_viridis(direction=-1, limits = c(1, 150))+
+  labs(title = "Street Centerlines by Number of Crashes",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+
+```{r street centerlines by crash count histogram, message=FALSE, warning=FALSE}
+# excluding segments with 0 crashes
+ggplot(EPCenterline_new, aes(x=crash_count)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
+  labs(title = "Distribution of Crash Numbers (0 Excluded)",
+       subtitle = "El Paso,TX") +
+  scale_x_continuous(limits = c(1, 150)) +
+  plotTheme()
+
+#including segments with 0 crashes
+ggplot(EPCenterline_new, aes(x=crash_count)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) +
+  labs(title = "Distribution of Crash Numbers",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+```
+
+### 4.4.4 VMT Data
+
+```{r VMT data, message=FALSE, warning=FALSE}
+census_geom <-
+  EP_econ %>%
+  subset(select = c("GEOID","geometry"))
+
+VMT$GEOID <- substr(VMT$FIPS, 1, 11)
+
+VMT_sf <-
+  census_geom %>%
+  right_join(VMT, by="GEOID") %>%
+  subset(id != 0) %>%
+  group_by(GEOID) %>%
+  summarise(VMT = sum(count)) %>%
+  merge(EP_econ %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, total_pop), by="GEOID",all.x=TRUE) %>%
+  mutate(VMT_pop = VMT/total_pop) %>%
+  st_transform('ESRI:102339')
+
+ggplot() +
+  geom_sf(data = VMT_sf, aes(fill = VMT_pop)) +
+  labs(title = "VMT per population",
+       subtitle = "El Paso, TX") +
+  mapTheme()
+
+```
+
+
+```{r merging VMT data into EPCenterline_new}
+VMT_centerlines <- 
+  EPCenterline_new %>%
+  st_join(VMT_sf)
+
+VMT_with_PCI_GEOID <- VMT_centerlines %>%
+  st_drop_geometry()%>%
+  group_by(index, GEOID)%>%
+  dplyr::select(index, GEOID, PCI_2018, VMT_pop)
+
+VMT_with_PCI_GEOID$uniqueID <- 1:nrow(VMT_with_PCI_GEOID)
+
+VMT_with_PCI_index <- VMT_with_PCI_GEOID %>%
+  group_by(index) %>%
+  summarize(PCI_2018 = mean(PCI_2018),
+            uniqueID = min(uniqueID),
+            VMT_pop = mean(VMT_pop))%>%
+  dplyr::select(index, uniqueID, PCI_2018, VMT_pop)
+
+VMT_with_PCI <- left_join(VMT_with_PCI_index, VMT_with_PCI_GEOID, by = 'uniqueID')%>%
+  dplyr::select(index.y,GEOID,PCI_2018.y, VMT_pop.y)%>%
+  rename(index=index.y,
+         PCI_2018=PCI_2018.y,
+         VMT_pop=VMT_pop.y)
+
+#join to epcenterline df
+EPCenterline_new2 <- EPCenterline_new %>%
+  left_join(VMT_with_PCI, by = 'index')%>%
+  dplyr::select(-PCI_2018.y) %>%
+  rename(PCI_2018=PCI_2018.x)
+
+```
+
+### 4.4.5 Census Data
+
+```{r merging census data into EPcenterline}
+EPCenterline_new3 <- 
+  EPCenterline_new2 %>%
+  left_join(EP_econ %>%
+              st_drop_geometry(), by = 'GEOID') %>%
+  left_join(EP_race %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, pctWhite), by = 'GEOID') %>%
+  left_join(EP_ethnicity %>%
+              st_drop_geometry() %>%
+              dplyr::select(GEOID, pctNotHL), by = 'GEOID') 
+
+```
+
+### 4.4.6 Roadbed Data
+
+```{r roadbed base material}
+roadbed_base <- roadbed_base %>%
+  st_transform('ESRI:102339')
+
+ggplot(roadbed_base, aes(y=BASE_TYPE_)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Roads by Base Material",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+
+```
+
+
+```{r roadbed surface material}
+roadbed_surface <- roadbed_surface %>%
+  st_transform('ESRI:102339')
+
+ggplot(roadbed_surface, aes(y=SRFC_TYPE)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Roads by Surface Material",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+```
+
+
+```{r paved status}
+paved_status <- EPCenterline_new[c('STATUS','index')]
+
+ggplot(paved_status, aes(y=STATUS)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Roads by Paved Status",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+```
+
+## 4.5 Correlation Exploration
+
+### 4.5.1 Correlation Matrix for Numerical Variables
+
+```{r correlation Matrix}
+numVars <-
+  EPCenterline_new3 %>%
+  dplyr::select(#potholes_count, waze_count, crash_count, 
+                #commenting out census variables while census API is down
+                #VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+                Res_Year,potholes_len, waze_len, crash_len) %>%
+  st_drop_geometry() %>%
+  na.omit()
+
+ggcorrplot(
+  round(cor(numVars), 1), 
+  p.mat = cor_pmat(numVars),
+  colors = c("#25CB10", "white", "#FA7800"),
+  type="lower",
+  show.diag = TRUE,
+  lab = TRUE, 
+  insig = "blank") +  
+  labs(title = "Correlation Matrix for Numeric Variables") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  plotTheme()
+
+ggcorrplot(
+  round(cor(numVars), 1), 
+  p.mat = cor_pmat(numVars),
+  colors = c("#0000FF", "white", "#DC143C"),
+  type="lower",
+  method = 'circle', 
+  insig = "blank") +  
+  labs(title = "Correlation Matrix for Numeric Variables") 
+```
+
+
+### 4.5.2 Categorical Correlations
+
+#### RouteType and PCI
+
+```{r routetype pci correlation}
+tl_roads_PCI <- st_join(tl_roads, EPCenterline_new3, join=st_nearest_feature)
+tl_roads_PCI <- tl_roads_PCI[c('index','RTTYP','PCI_2018')]
+
+tl_roads_PCI %>%
+ggplot(aes(RTTYP, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "RouteType vs. PCI",
+         subtitle = "Dataset: Tiger Line Roads") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+#### Road Class and PCI
+
+```{r class pci correlation}
+class_PCI<- EPCenterline_new3[c('index','CLASS','PCI_2018')]
+
+class_PCI %>%
+ggplot(aes(CLASS, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "Road Class vs. PCI",
+         subtitle = "Dataset: EPCenterline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+```
+
+#### Roadbed Base Material and PCI
+
+```{r roadbed base pci correlation}
+roadbed_base_PCI <- st_join(roadbed_base, EPCenterline_new3, join=st_nearest_feature)
+roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
+
+roadbed_base_PCI %>%
+ggplot(aes(BASE_TYPE_, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "Roadbed Base Material vs. PCI",
+         subtitle = "Dataset: TXDOT Roadbed_Base") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+```
+
+#### Roadbed Surface Material and PCI - jenna to mess with this plotTheme and wrap the labels
+
+```{r roadbed surface pci correlation}
+roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_new3, join=st_nearest_feature)
+roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
+
+roadbed_surface_PCI %>%
+ggplot(aes(SRFC_TYPE, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "Roadbed surface Material vs. PCI",
+         subtitle = "Dataset: TXDOT Roadbed_Surface") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+```
+
+#### Paved Status and PCI
+
+```{r paved status pci correlation}
+paved_PCI<- EPCenterline_new3[c('index','STATUS','PCI_2018')]
+
+paved_PCI %>%
+ggplot(aes(STATUS, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "Paved Status vs. PCI",
+         subtitle = "Dataset: EPCenterline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+```
+
+
+
