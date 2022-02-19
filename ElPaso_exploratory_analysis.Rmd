@@ -1071,20 +1071,42 @@ ggplot() +
 
 
 ```{r merging VMT data into EPCenterline_new}
-#when joining in VMT data, EPCenterline_new gets larger. look into this - that's why I duplicated it so we don't overwrite it
-EPCenterline_new2 <- 
+# this works! but takes a while to run - feel free to change to make it faster if you know a better way :) 
+VMT_centerlines <- 
   EPCenterline_new %>%
-  st_join(VMT_sf)%>%
-  group_by('index')%>%
-  summarize(mean('PCI_2018'))
+  st_join(VMT_sf)
+
+VMT_with_PCI_GEOID <- VMT_centerlines %>%
+  st_drop_geometry()%>%
+  group_by(index, GEOID)%>%
+  dplyr::select(index, GEOID, PCI_2018, VMT_pop)
+
+VMT_with_PCI_GEOID$uniqueID <- 1:nrow(VMT_with_PCI_GEOID)
+
+VMT_with_PCI_index <- VMT_with_PCI_GEOID %>%
+  group_by(index) %>%
+  summarize(PCI_2018 = mean(PCI_2018),
+            uniqueID = min(uniqueID),
+            VMT_pop = mean(VMT_pop))%>%
+  dplyr::select(index, uniqueID, PCI_2018, VMT_pop)
+
+VMT_with_PCI <- left_join(VMT_with_PCI_index, VMT_with_PCI_GEOID, by = 'uniqueID')%>%
+  dplyr::select(index.y,GEOID,PCI_2018.y, VMT_pop.y)%>%
+  rename(index=index.y,
+         PCI_2018=PCI_2018.y,
+         VMT_pop=VMT_pop.y)
+
+#join to epcenterline df
+EPCenterline_new <- EPCenterline_new %>%
+  left_join(VMT_with_PCI, by = 'index')
 
 ```
 
 ### Joining Census data into EPCenterline_new
 
 ```{r merging census data into EPcenterline}
-EPCenterline_new3 <- 
-  EPCenterline_new2 %>%
+EPCenterline_new <- 
+  EPCenterline_new %>%
   left_join(EP_econ %>%
               st_drop_geometry(), by = 'GEOID') %>%
   left_join(EP_race %>%
@@ -1296,7 +1318,7 @@ numVars <-
   EPCenterline_new %>%
   dplyr::select(#potholes_count, waze_count, crash_count, 
                 #commenting out census variables while census API is down
-                #VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+                VMT_pop, #total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
                 Res_Year,potholes_len, waze_len, crash_len) %>%
   st_drop_geometry() %>%
   na.omit()
