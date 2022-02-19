@@ -1071,7 +1071,7 @@ ggplot() +
 
 
 ```{r merging VMT data into EPCenterline_new}
-# this works! but takes a while to run - feel free to change to make it faster if you know a better way :) 
+
 VMT_centerlines <- 
   EPCenterline_new %>%
   st_join(VMT_sf)
