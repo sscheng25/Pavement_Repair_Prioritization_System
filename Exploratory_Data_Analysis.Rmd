@@ -1000,6 +1000,27 @@ ggplot(data = EPcity_landcover_df) +
 
 ```
 
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+library(leaflet)
+# JENNA'S ATTEMPT AT MAKING A LEAFLET INTERACTIVE MAP - HAVING TROUBLE GETTING THE CENTERLINES TO SHOW UP ALONG WITH THE RASTER
+# r <- EPcity_landcover_crop
+# pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFCC"), values(r),
+#   na.color = "transparent")
+# 
+# map <- leaflet(map) 
+# 
+# map_landcover_interactive <- map %>% 
+#   setView(lng = -106.4850,
+#                 lat = 31.7619,
+#                 zoom = 10) %>%
+#     addTiles() %>%
+#   addRasterImage(r, colors = pal, opacity = 0.8) %>%
+#   addLegend(pal = pal, values = values(r)) %>%
+#   addPolygons(data = EPCenterline_new4, stroke=T)
+# # + title = "NLCD")
+```
+
+
 ### 4.3.4 Land Use Exploration
 
 ```{r land use visualization, message=FALSE, warning=FALSE}
@@ -1023,14 +1044,18 @@ land_use_majority_sf <- land_use_majority %>%
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = land_use_majority_sf, aes(fill = land_use_type)) +
-  labs(title = "Land Use by Census Tract",
+  geom_sf(data = land_use_majority_sf, aes(fill = land_use_type), color="grey") +
+  scale_fill_viridis_d(option="mako", direction=-1) +
+                     labs(title = "Land Use by Census Tract",
+       fill= "Land Use Type \n(Majority)",
        subtitle = "El Paso, TX") +
   mapTheme()
 
 ggplot(land_use_majority_sf, aes(y=land_use_type)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Land Use by Census Tract",
+       y="Land Use Type",
+       x="Count of Tracts",
        subtitle = "El Paso,TX") +
   plotTheme()
 
@@ -1066,25 +1091,31 @@ EPCenterline_new$potholes_len <- as.numeric(as.character(EPCenterline_new$pothol
 
 ```{r visualize street centerline segments by potholes count, message=FALSE, warning=FALSE}
 # only mapping when potholes are greater than or equal to 1
-# TO DO - LOG TRANSFORM THE SCALE SO WE CAN BETTER SEE DISTRIBUTION. OR CREATE BINS USING QBR FUNCTION
+# log transformed so make it easier to see
+
+my_breaks = c(1, 5, 10, 25,210)
+
+
 ggplot() +
-  geom_sf(data = EPCenterline_new, aes(color = potholes_count)) +
-  scale_colour_viridis(option='G', direction=-1)+
-  labs(title = "Street Centerlines by Number of Potholes",
+  geom_sf(data = EPCenterline_new%>%  filter(potholes_count > 0), aes(color = potholes_count)) +
+  scale_colour_viridis(option='G',  trans = "log", breaks=my_breaks, labels=my_breaks, limits = c(1, 250),
+                       name="Number of potholes\n")+
+  labs(title = "Road Centerlines by Number of Potholes",
+       x= "Number of Potholes",
        subtitle = "El Paso, TX") + mapTheme()
 
 # potholes_len
 ggplot() +
-  geom_sf(data = EPCenterline_new, aes(color = potholes_len)) +
-  scale_colour_viridis(option='G', direction=-1)+
-  labs(title = "Street Centerlines by Number of Potholes",
+  geom_sf(data = EPCenterline_new%>%  filter(potholes_len > 0), aes(color = potholes_len)) +
+  scale_colour_viridis(option='G', direction=-1, trans = "log", breaks=my_breaks, labels=my_breaks, limits = c(1, 210),
+                       name="Number of potholes \nby road length\n")+
+  labs(title = "Road Centerlines by Number of Potholes by Length of Road",
        subtitle = "El Paso, TX") + mapTheme()
-
 
 ```
 
 
-```{r street centerlines by pothole count histogram, message=FALSE, warning=FALSE}
+```{r  centerlines by pothole count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_count)) + 
   geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
@@ -1096,6 +1127,26 @@ ggplot(EPCenterline_new, aes(x=potholes_count)) +
 ggplot(EPCenterline_new, aes(x=potholes_count)) + 
   geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
   labs(title = "Distribution of Potholes Numbers",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+
+```
+```{r}
+# excluding segments with 0 potholes
+ggplot(EPCenterline_new, aes(x=potholes_len)) + 
+  geom_histogram(fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
+  labs(title = "Distribution of Potholes Numbers by Road Length (0 Excluded)",
+        x="Potholes by Road Length",
+       y="Count of Road Segments",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+
+# including segments with 0 potholes
+ggplot(EPCenterline_new, aes(x=potholes_len)) + 
+  geom_histogram(fill="#e6a52f", binwidth = 10) + 
+  labs(title = "Distribution of Potholes Numbers by Road Length",
+       x="Potholes by Road Length",
+       y="Count of Road Segments",
        subtitle = "El Paso,TX") +
   plotTheme()
 
