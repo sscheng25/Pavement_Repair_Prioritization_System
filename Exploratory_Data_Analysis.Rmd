@@ -457,7 +457,7 @@ for(i in econ_vars){
       labs(title=i) + mapTheme()
       }
 
-do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Select Socioeconomics by Census Tract", bottom = "Source: US Census, ACS 2019"))
+do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Selected Socioeconomics by Census Tract", bottom = "Source: US Census, ACS 2019"))
 ```
 
 
@@ -472,7 +472,7 @@ ggplot()+
 
 
 ```{r census_socioecon_medhhinc_map, message=FALSE, warning=FALSE}
-#median household inc map
+#median household income map
 ggplot()+
   geom_sf(data=EP_econ, aes(fill=med_hh_income))+
   scale_fill_viridis()+
