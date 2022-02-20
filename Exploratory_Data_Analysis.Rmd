@@ -42,7 +42,7 @@ library(grid)
 library(mapview)
 library(stringr)
 library(ggcorrplot)
-
+library(scales)
 library(colorspace)
 library(rgdal)          
 library(RColorBrewer) 
@@ -54,6 +54,7 @@ palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
 palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
 palette_4 <-c("#08519c","#3bf0c0","#e6a52f","#e76420")
 palette_2 <-c("#e6a52f","#08519c")
+palette_3 <-c("#e6a52f","#08519c", "#e76420")
 
 
 ```
@@ -759,6 +760,9 @@ potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 
 #NEED TO ALSO CLIP IT WITHIN EL PASO CITY
 
+ potholes_sf <- potholes_sf %>%
+  st_intersection(El_Paso_city, potholes_sf)
+
 ```
 
 
@@ -786,14 +790,16 @@ ggplot() +
 # 2016-2018 map
 ggplot() +
   geom_sf(data = El_Paso_city, fill="grey") +
-  geom_sf(data = potholes_sf_2016to2018, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  geom_sf(data = potholes_sf_2016to2018, aes(colour=YEAR), size=0.5, show.legend = "point") +
+  scale_color_manual(values=palette_5blues) +
   labs(title = "Potholes in 2016-2018",
        subtitle = "El Paso, TX") + mapTheme()
 
 #  2019-2021 map
 ggplot() +
   geom_sf(data = El_Paso_city, fill="grey") +
-  geom_sf(data = potholes_sf_2019to2021, aes(colour=YEAR), size=0.2, show.legend = "point") +
+  geom_sf(data = potholes_sf_2019to2021, aes(colour=YEAR), size=0.5, show.legend = "point") +
+  scale_color_manual(values=palette_5blues) +
   labs(title = "Potholes in 2019-2021",
        subtitle = "El Paso, TX") + mapTheme()
 
@@ -802,6 +808,24 @@ ggplot(potholes_sf, aes(y=YEAR)) +
   labs(title = "Year of pot holes repairment",
        subtitle = "El Paso, TX") + plotTheme()
 
+```
+```{r}
+library(gganimate)
+library(gifski)
+library(transformr)
+
+potholes_sf2 <- potholes_sf %>% mutate(
+  YEAR = parse_number(YEAR))
+
+potholes_animation <-
+  ggplot() +
+    geom_sf(data = potholes_sf2, aes(color = YEAR)) +
+    scale_color_viridis(option='G') +
+    labs(title = "Potholes",
+         subtitle = "Reports of Repairment by Year") + mapTheme() +
+   transition_time(YEAR)
+
+gganimate::animate(potholes_animation, duration=10, renderer = gifski_renderer())
 ```
 
 
@@ -989,7 +1013,7 @@ ggplot(data = EPcity_landcover_df) +
                     labels = LCnames[-2],
                     na.translate = FALSE) +
   coord_sf(expand = F) +
-    geom_sf(data = EPCenterline_with_PCI) +
+    geom_sf(data = EPCenterline_with_PCI, alpha=0.7) +
   scale_color_viridis(direction=-1)+
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) + 
@@ -1093,12 +1117,13 @@ EPCenterline_new$potholes_len <- as.numeric(as.character(EPCenterline_new$pothol
 # only mapping when potholes are greater than or equal to 1
 # log transformed so make it easier to see
 
-my_breaks = c(1, 5, 10, 25,210)
+potholes_breaks = c(1, 5, 10, 25,210)
 
 
 ggplot() +
+  geom_sf(data=El_Paso_city, color="grey")+
   geom_sf(data = EPCenterline_new%>%  filter(potholes_count > 0), aes(color = potholes_count)) +
-  scale_colour_viridis(option='G',  trans = "log", breaks=my_breaks, labels=my_breaks, limits = c(1, 250),
+  scale_colour_viridis(option='G',  direction=-1, trans = "log", breaks=potholes_breaks, labels=my_breaks, limits = c(1, 250),
                        name="Number of potholes\n")+
   labs(title = "Road Centerlines by Number of Potholes",
        x= "Number of Potholes",
@@ -1106,8 +1131,9 @@ ggplot() +
 
 # potholes_len
 ggplot() +
-  geom_sf(data = EPCenterline_new%>%  filter(potholes_len > 0), aes(color = potholes_len)) +
-  scale_colour_viridis(option='G', direction=-1, trans = "log", breaks=my_breaks, labels=my_breaks, limits = c(1, 210),
+  geom_sf(data=El_Paso_city, color="grey")+
+  geom_sf(data = EPCenterline_new %>%  filter(potholes_len > 0), aes(color = potholes_len)) +
+  scale_colour_viridis(option='G', direction=-1, trans = "log", breaks=potholes_breaks, labels=my_breaks, limits = c(1, 210),
                        name="Number of potholes \nby road length\n")+
   labs(title = "Road Centerlines by Number of Potholes by Length of Road",
        subtitle = "El Paso, TX") + mapTheme()
@@ -1131,7 +1157,7 @@ ggplot(EPCenterline_new, aes(x=potholes_count)) +
   plotTheme()
 
 ```
-```{r}
+```{r message=FALSE, warning=FALSE}
 # excluding segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_len)) + 
   geom_histogram(fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
@@ -1187,9 +1213,9 @@ EPCenterline_new$waze_len <- as.numeric(as.character(EPCenterline_new$waze_len))
 
 ```
 
-### 4.4.3 Crash Data
+### 4.4.3 Crash Data (2018 only)
 
-```{r join crashes to centerlines}
+```{r join crashes to centerlines, message=FALSE, warning=FALSE}
 #replace 0s in lat long columns with NA so we can omit
 crash18_trim<-crash18[!(crash18$Latitude==0 | crash18$Longitude==0),]
 
@@ -1223,7 +1249,7 @@ EPCenterline_new <- merge(EPCenterline_new, crash_groupings, by = "index", all.x
 #replace NAs in crash count column with 0
 EPCenterline_new$crash_count[is.na(EPCenterline_new$crash_count)] <- 0
 
-# calculate crahs per 100 meters
+# calculate crash per 100 meters
 EPCenterline_new <-
   EPCenterline_new %>%
   mutate(crash_len = crash_count*100/pave_length)
@@ -1234,21 +1260,10 @@ EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len
 ```
 
 
-```{r visualize street centerline segments by crash count, message=FALSE, warning=FALSE}
-# only mapping when crashes are greater than or equal to 1
-ggplot() +
-  geom_sf(data = El_Paso_city, fill="transparent", color="red") +
-  geom_sf(data = EPCenterline_new , aes(color = crash_count)) +
-  scale_color_viridis(direction=-1, option='G',limits = c(1, 150))+
-  labs(title = "Road Centerlines by Number of Crashes",
-       subtitle = "El Paso, TX") + mapTheme()
-```
-
-
-```{r street centerlines by crash count histogram, message=FALSE, warning=FALSE}
+```{r road centerlines by crash count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_count)) + 
-  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
+  geom_histogram( fill="#e6a52f", binwidth = 10) + 
   labs(title = "Distribution of Crash Numbers (0 Excluded)",
        subtitle = "El Paso,TX") +
   scale_x_continuous(limits = c(1, 150)) +
@@ -1256,12 +1271,28 @@ ggplot(EPCenterline_new, aes(x=crash_count)) +
 
 #including segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_count)) + 
-  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) +
+  geom_histogram( fill="#e6a52f", binwidth = 10) +
   labs(title = "Distribution of Crash Numbers",
        subtitle = "El Paso,TX") +
   plotTheme()
 ```
 
+```{r road centerlines by crash len histogram, message=FALSE, warning=FALSE}
+# excluding segments with 0 crashes
+ggplot(EPCenterline_new, aes(x=crash_len)) + 
+  geom_histogram(fill="#e6a52f", binwidth = 10) + 
+  labs(title = "Distribution of Crash Numbers (0 Excluded)",
+       subtitle = "El Paso,TX") +
+  scale_x_continuous(limits = c(1, 150)) +
+  plotTheme()
+
+#including segments with 0 crashes
+ggplot(EPCenterline_new, aes(x=crash_len)) + 
+  geom_histogram(fill="#e6a52f", binwidth = 10) +
+  labs(title = "Distribution of Crash Numbers",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+```
 ### 4.4.4 VMT Data
 
 ```{r VMT data, message=FALSE, warning=FALSE}
@@ -1284,16 +1315,19 @@ VMT_sf <-
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = VMT_sf, aes(fill = VMT_pop)) +
+  geom_sf(data = VMT_sf2, aes(fill = VMT_pop)) +
   scale_fill_viridis(direction=-1, option='G')+
   labs(title = "VMT per population",
        subtitle = "El Paso, TX") +
   mapTheme()
 
+
+VMT_sf2 <- VMT_sf %>% drop_na()
+
 ```
 
 
-```{r merging VMT data into EPCenterline_new}
+```{r merging VMT data into EPCenterline_new, message=FALSE, warning=FALSE}
 VMT_centerlines <- 
   EPCenterline_new %>%
   st_join(VMT_sf)
@@ -1354,13 +1388,15 @@ roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
 ggplot(roadbed_base_PCI, aes(y=BASE_TYPE_)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Roads by Base Material",
-       subtitle = "El Paso,TX") +
+       y="Base Type",
+       x="Count",
+       subtitle = "El Paso, TX") +
   plotTheme()
 
 ```
 
 
-```{r roadbed surface material}
+```{r roadbed surface material, message=FALSE, warning=FALSE}
 roadbed_surface <- roadbed_surface %>%
   st_transform('ESRI:102339')
 
@@ -1370,24 +1406,28 @@ roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
 ggplot(roadbed_surface_PCI, aes(y=SRFC_TYPE)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Roads by Surface Material",
-       subtitle = "El Paso,TX") +
+       y="Surface Material Type",
+       x="Count",
+       subtitle = "El Paso, TX") +
   plotTheme()
 ```
 
 
-```{r paved status}
+```{r paved status, message=FALSE, warning=FALSE}
 paved_status <- EPCenterline_new[c('STATUS','index')]
 
 ggplot(paved_status, aes(y=STATUS)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Roads by Paved Status",
+       y="Paved Status",
+       x="Count",
        subtitle = "El Paso,TX") +
   plotTheme()
 ```
 
 ### 4.4.7 Land Use Data
 
-```{r land use join to road segments}
+```{r land use join to road segments, message=FALSE, warning=FALSE}
 land_use_centerlines <- 
   EPCenterline_new %>%
   st_join(land_use_majority_sf)
@@ -1427,7 +1467,18 @@ numVars <-
   EPCenterline_new4 %>%
   dplyr::select(#potholes_count, waze_count, crash_count, 
                 #commenting out census variables while census API is down
-                #VMT_pop, total_pop.y, med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+                VMT_pop, 
+                #total_pop.y, 
+                #med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+                Res_Year,potholes_len, waze_len, crash_len) %>%
+  st_drop_geometry() %>%
+  na.omit()
+
+numVars_withCensusVars <-
+  EPCenterline_new4 %>%
+  dplyr::select(#potholes_count, waze_count, crash_count, 
+                VMT_pop,
+                med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
                 Res_Year,potholes_len, waze_len, crash_len) %>%
   st_drop_geometry() %>%
   na.omit()
@@ -1435,23 +1486,36 @@ numVars <-
 ggcorrplot(
   round(cor(numVars), 1), 
   p.mat = cor_pmat(numVars),
-  colors = c("#25CB10", "white", "#FA7800"),
+  colors = c("#e6a52f", "white", "#3fb0c0"),
   type="lower",
   show.diag = TRUE,
   lab = TRUE, 
   insig = "blank") +  
   labs(title = "Correlation Matrix for Numeric Variables") +
-  theme(plot.title = element_text(hjust = 0.5)) +
+  #theme(plot.title = element_text(hjust = 0.5)) +
   plotTheme()
 
 ggcorrplot(
-  round(cor(numVars), 1), 
-  p.mat = cor_pmat(numVars),
-  colors = c("#0000FF", "white", "#DC143C"),
+  round(cor(numVars_withCensusVars), 1), 
+  p.mat = cor_pmat(numVars_withCensusVars),
+  colors = c("#e6a52f", "white", "#3fb0c0"),
   type="lower",
-  method = 'circle', 
+  show.diag = TRUE,
+  lab = TRUE, 
   insig = "blank") +  
-  labs(title = "Correlation Matrix for Numeric Variables") 
+  labs(title = "Correlation Matrix for Numeric Variables",
+  subtitle="Including Census Variables") +
+  #theme(plot.title = element_text(hjust = 0.5)) +
+  plotTheme()
+
+# ggcorrplot(
+#   round(cor(numVars), 1), 
+#   p.mat = cor_pmat(numVars),
+#   colors = c("#e6a52f", "white", "#3fb0c0"),
+#   type="lower",
+#   method = 'circle', 
+#   insig = "blank") +  
+#   labs(title = "Correlation Matrix for Numeric Variables") 
 ```
 
 
@@ -1466,9 +1530,10 @@ tl_roads_PCI <- tl_roads_PCI[c('index','RTTYP','PCI_2018')]
 tl_roads_PCI %>%
 ggplot(aes(RTTYP, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
-    labs(title = "RouteType vs. PCI",
-         subtitle = "Dataset: Tiger Line Roads") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    labs(title = "Route Type vs. PCI",
+         y="PCI Score in 2018",
+         x="Route Type",
+         subtitle = "Dataset: Tiger Line Roads (US Census)") + plotTheme()
 ```
 
 #### Road Class and PCI
@@ -1480,55 +1545,69 @@ class_PCI %>%
 ggplot(aes(CLASS, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
     labs(title = "Road Class vs. PCI",
-         subtitle = "Dataset: EPCenterline") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+         y="PCI Score in 2018",
+         x="Road Class",
+         subtitle = "Dataset: EPCenterline")  + plotTheme()
 ```
 
 #### Roadbed Base Material and PCI
 
-```{r roadbed base pci correlation}
+```{r roadbed base pci correlation, message=FALSE, warning=FALSE}
 roadbed_base_PCI %>%
 ggplot(aes(BASE_TYPE_, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
     labs(title = "Roadbed Base Material vs. PCI",
+         y="PCI Score in 2018",
+         x="Roadbed Base Material",
          subtitle = "Dataset: TXDOT Roadbed_Base") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+   scale_x_discrete(labels = wrap_format(10)) + 
+  plotTheme()
 ```
 
-#### Roadbed Surface Material and PCI - jenna to mess with this plotTheme and wrap the labels
+#### Roadbed Surface Material and PCI
 
 ```{r roadbed surface pci correlation}
 roadbed_surface_PCI %>%
 ggplot(aes(SRFC_TYPE, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
-    labs(title = "Roadbed surface Material vs. PCI",
+    geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "Roadbed Surface Material vs. PCI",
+         y="PCI Score in 2018",
+         x="Roadbed Surface Material",
          subtitle = "Dataset: TXDOT Roadbed_Surface") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+   scale_x_discrete(labels = wrap_format(19)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    plotTheme()
 ```
 
 #### Paved Status and PCI
 
-```{r paved status pci correlation}
+```{r paved status pci correlation, warning=FALSE}
 paved_PCI<- EPCenterline_new4[c('index','STATUS','PCI_2018')]
 
 paved_PCI %>%
 ggplot(aes(STATUS, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
     labs(title = "Paved Status vs. PCI",
-         subtitle = "Dataset: EPCenterline") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+         y="PCI Score in 2018",
+         x="Paved Status",
+         subtitle = "Dataset: EPCenterline") + plotTheme()
 ```
 
 #### Land Use and PCI
 
-```{r land use pci correlation}
+```{r land use pci correlation, message=FALSE, warning=FALSE}
 land_use_with_PCI<- EPCenterline_new4[c('index','land_use_type','PCI_2018')]%>%
   na.omit()
+
+land_use_with_PCI$land_use_type = stringr::str_replace_all(land_use_with_PCI$land_use_type, "_", " ")
 
 land_use_with_PCI %>%
 ggplot(aes(land_use_type, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
     labs(title = "Land Use vs. PCI",
-         subtitle = "Dataset: EPCenterline") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+         y="PCI Score in 2018",
+         x="Land Use Type",
+         subtitle = "Dataset: El Paso Land Use") +
+  scale_x_discrete(labels = wrap_format(12)) + 
+   plotTheme()
 ```
