@@ -101,7 +101,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
+#source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 ```
 
 
@@ -113,7 +113,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-# source("Kristin.R")
+source("Kristin.R")
 ```
 
 # 1. Project Introduction
@@ -159,6 +159,8 @@ crash18 <- st_read("Data/CRIS2018/CRIS2018.shp")
 roadbed_base <- st_read("Data/Roadbed_Base/Roadbed_Base.shp")
 
 roadbed_surface <- st_read("Data/Roadbed_Surface/Roadbed_Surface.shp")
+
+land_use <- st_read("Data/LandUse_KCedits.csv")
 
 # Note: The "el_paso_pass2" shapefile is too large for our GitHub repository, so it is read in for each team member using .source() - each person has a source file with local file paths and keys.
 
@@ -969,6 +971,41 @@ ggplot(data = EPcity_landcover_df) +
 
 
 ```
+### 4.3.4 Land Use Exploration
+
+```{r land use visualization}
+census_geom <-
+  EP_econ %>%
+  subset(select = c("GEOID","NAME", "geometry"))
+
+land_use_tracts <-
+  census_geom %>%
+  right_join(land_use, by="NAME")
+
+land_use_long <-
+  gather(land_use_tracts, land_use_type, sqft, land_area_sqft_single_family:land_area_sqft_unknown, factor_key=TRUE)
+
+land_use_majority <- land_use_long%>%
+  group_by(GEOID, NAME)%>%
+  slice(which.max(sqft))%>%
+  dplyr::select("GEOID","NAME","land_use_type")
+
+land_use_majority_sf <- land_use_majority %>%
+  st_transform('ESRI:102339')
+
+ggplot() +
+  geom_sf(data = land_use_majority_sf, aes(fill = land_use_type)) +
+  labs(title = "Land Use by Census Tract",
+       subtitle = "El Paso, TX") +
+  mapTheme()
+
+ggplot(land_use_majority_sf, aes(y=land_use_type)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Land Use by Census Tract",
+       subtitle = "El Paso,TX") +
+  plotTheme()
+
+```
 
 
 ## 4.4 Joining Data Together
@@ -1203,7 +1240,7 @@ EPCenterline_new2 <- EPCenterline_new %>%
 
 ```{r merging census data into EPcenterline}
 EPCenterline_new3 <- 
-  EPCenterline_new2 %>%
+  EPCenterline_new %>%
   left_join(EP_econ %>%
               st_drop_geometry(), by = 'GEOID') %>%
   left_join(EP_race %>%
@@ -1221,7 +1258,10 @@ EPCenterline_new3 <-
 roadbed_base <- roadbed_base %>%
   st_transform('ESRI:102339')
 
-ggplot(roadbed_base, aes(y=BASE_TYPE_)) +
+roadbed_base_PCI <- st_join(roadbed_base, EPCenterline_new3, join=st_nearest_feature)
+roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
+
+ggplot(roadbed_base_PCI, aes(y=BASE_TYPE_)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Roads by Base Material",
        subtitle = "El Paso,TX") +
@@ -1234,7 +1274,10 @@ ggplot(roadbed_base, aes(y=BASE_TYPE_)) +
 roadbed_surface <- roadbed_surface %>%
   st_transform('ESRI:102339')
 
-ggplot(roadbed_surface, aes(y=SRFC_TYPE)) +
+roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_new3, join=st_nearest_feature)
+roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
+
+ggplot(roadbed_surface_PCI, aes(y=SRFC_TYPE)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Roads by Surface Material",
        subtitle = "El Paso,TX") +
@@ -1251,6 +1294,38 @@ ggplot(paved_status, aes(y=STATUS)) +
        subtitle = "El Paso,TX") +
   plotTheme()
 ```
+
+### 4.4.7 Land Use Data
+```{r land use join to road segments}
+land_use_centerlines <- 
+  EPCenterline_new %>%
+  st_join(land_use_majority_sf)
+
+land_use_with_PCI_GEOID <- land_use_centerlines %>%
+  st_drop_geometry()%>%
+  group_by(index, GEOID)%>%
+  dplyr::select(index, GEOID, PCI_2018, land_use_type)
+
+land_use_with_PCI_GEOID$uniqueID <- 1:nrow(land_use_with_PCI_GEOID)
+
+land_use_with_PCI_index <- land_use_with_PCI_GEOID %>%
+  group_by(index) %>%
+  summarize(PCI_2018 = mean(PCI_2018),
+            uniqueID = min(uniqueID))
+
+land_use_with_PCI <- left_join(land_use_with_PCI_index, land_use_with_PCI_GEOID, by = 'uniqueID')%>%
+  dplyr::select(index.y,GEOID,PCI_2018.y, land_use_type)%>%
+  rename(index=index.y,
+         PCI_2018=PCI_2018.y,
+         land_use_type=land_use_type)
+
+#join to epcenterline df
+EPCenterline_new4 <- EPCenterline_new3 %>%
+  right_join(land_use_with_PCI, by = 'index')%>%
+  dplyr::select(-PCI_2018.y) %>%
+  rename(PCI_2018=PCI_2018.x)
+```
+
 
 ## 4.5 Correlation Exploration
 
@@ -1294,7 +1369,7 @@ ggcorrplot(
 #### RouteType and PCI
 
 ```{r routetype pci correlation}
-tl_roads_PCI <- st_join(tl_roads, EPCenterline_new3, join=st_nearest_feature)
+tl_roads_PCI <- st_join(tl_roads, EPCenterline_new, join=st_nearest_feature)
 tl_roads_PCI <- tl_roads_PCI[c('index','RTTYP','PCI_2018')]
 
 tl_roads_PCI %>%
@@ -1308,7 +1383,7 @@ ggplot(aes(RTTYP, PCI_2018)) +
 #### Road Class and PCI
 
 ```{r class pci correlation}
-class_PCI<- EPCenterline_new3[c('index','CLASS','PCI_2018')]
+class_PCI<- EPCenterline_new[c('index','CLASS','PCI_2018')]
 
 class_PCI %>%
 ggplot(aes(CLASS, PCI_2018)) +
@@ -1321,9 +1396,6 @@ ggplot(aes(CLASS, PCI_2018)) +
 #### Roadbed Base Material and PCI
 
 ```{r roadbed base pci correlation}
-roadbed_base_PCI <- st_join(roadbed_base, EPCenterline_new3, join=st_nearest_feature)
-roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
-
 roadbed_base_PCI %>%
 ggplot(aes(BASE_TYPE_, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
@@ -1335,9 +1407,6 @@ ggplot(aes(BASE_TYPE_, PCI_2018)) +
 #### Roadbed Surface Material and PCI - jenna to mess with this plotTheme and wrap the labels
 
 ```{r roadbed surface pci correlation}
-roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_new3, join=st_nearest_feature)
-roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
-
 roadbed_surface_PCI %>%
 ggplot(aes(SRFC_TYPE, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
@@ -1349,7 +1418,7 @@ ggplot(aes(SRFC_TYPE, PCI_2018)) +
 #### Paved Status and PCI
 
 ```{r paved status pci correlation}
-paved_PCI<- EPCenterline_new3[c('index','STATUS','PCI_2018')]
+paved_PCI<- EPCenterline_new[c('index','STATUS','PCI_2018')]
 
 paved_PCI %>%
 ggplot(aes(STATUS, PCI_2018)) +
@@ -1359,5 +1428,16 @@ ggplot(aes(STATUS, PCI_2018)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
 ```
 
+#### Land Use and PCI
 
+```{r land use pci correlation}
+land_use_with_PCI<- EPCenterline_new4[c('index','land_use_type','PCI_2018')]%>%
+  na.omit()
 
+land_use_with_PCI %>%
+ggplot(aes(land_use_type, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    labs(title = "Land Use vs. PCI",
+         subtitle = "Dataset: EPCenterline") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + plotTheme()
+```

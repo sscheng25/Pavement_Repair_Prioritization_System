@@ -1159,7 +1159,10 @@ ggplot(tl_roads, aes(y=RTTYP)) +
 roadbed_base <- roadbed_base %>%
   st_transform('ESRI:102339')
 
-ggplot(roadbed_base, aes(y=BASE_TYPE_)) +
+roadbed_base_PCI <- st_join(roadbed_base, EPCenterline_new, join=st_nearest_feature)
+roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
+
+ggplot(roadbed_base_PCI, aes(y=BASE_TYPE_)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "El Paso,TX Roads by Base Material") +
   plotTheme()
@@ -1169,6 +1172,9 @@ ggplot(roadbed_base, aes(y=BASE_TYPE_)) +
 ```{r roadbed surface material}
 roadbed_surface <- roadbed_surface %>%
   st_transform('ESRI:102339')
+
+roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_new, join=st_nearest_feature)
+roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
 
 ggplot(roadbed_surface, aes(y=SRFC_TYPE)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
@@ -1377,9 +1383,6 @@ ggplot(aes(CLASS, PCI_2018)) +
 ### Roadbed Base Material and PCI
 
 ```{r roadbed base pci correlation}
-roadbed_base_PCI <- st_join(roadbed_base, EPCenterline_new, join=st_nearest_feature)
-roadbed_base_PCI <- roadbed_base_PCI[c('index','BASE_TYPE_','PCI_2018')]
-
 roadbed_base_PCI %>%
 ggplot(aes(BASE_TYPE_, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
@@ -1391,9 +1394,6 @@ ggplot(aes(BASE_TYPE_, PCI_2018)) +
 ### Roadbed Surface Material and PCI - jenna to mess with this plotTheme and wrap the labels
 
 ```{r roadbed surface pci correlation}
-roadbed_surface_PCI <- st_join(roadbed_surface, EPCenterline_new, join=st_nearest_feature)
-roadbed_surface_PCI <- roadbed_surface_PCI[c('index','SRFC_TYPE','PCI_2018')]
-
 roadbed_surface_PCI %>%
 ggplot(aes(SRFC_TYPE, PCI_2018)) +
      geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
