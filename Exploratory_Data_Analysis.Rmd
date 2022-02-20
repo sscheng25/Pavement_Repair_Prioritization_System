@@ -101,7 +101,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-#source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
+source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 ```
 
 
@@ -113,7 +113,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Kristin.R")
+#source("Kristin.R")
 ```
 
 # 1. Project Introduction
@@ -515,14 +515,13 @@ EPCenterline <-
   st_intersection(El_Paso_city, EPCenterline) %>%
   subset(CLASS == "LOCAL" | CLASS == "MINOR" | CLASS == "MAJOR" | CLASS == "COLLECTOR" | CLASS == "MINOR PR" | CLASS == "COLLECTOR PR" | CLASS == "MAJOR PR" ) 
 
-unique(EPCenterline$CLASS)
+# unique(EPCenterline$CLASS)
 
 ggplot() +
   geom_sf(data = EPCenterline, aes(color = CLASS)) +
   labs(title = "Centerlines by Class",
        subtitle = "El Paso, TX") + mapTheme()
 
-# unique(EPCenterline$CLASS)
 ggplot(EPCenterline, aes(y=CLASS)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Pavement Centerline Counts by Class",
@@ -1240,7 +1239,7 @@ EPCenterline_new2 <- EPCenterline_new %>%
 
 ```{r merging census data into EPcenterline}
 EPCenterline_new3 <- 
-  EPCenterline_new %>%
+  EPCenterline_new2 %>%
   left_join(EP_econ %>%
               st_drop_geometry(), by = 'GEOID') %>%
   left_join(EP_race %>%
