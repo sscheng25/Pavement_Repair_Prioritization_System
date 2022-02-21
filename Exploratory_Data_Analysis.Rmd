@@ -1270,7 +1270,7 @@ EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len
 ```{r road centerlines by crash count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_count)) + 
-  geom_histogram( fill="#e6a52f", binwidth = 10) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
   labs(title = "Distribution of Crash Numbers (0 Excluded)",
        subtitle = "El Paso,TX") +
   scale_x_continuous(limits = c(1, 150)) +
@@ -1278,7 +1278,7 @@ ggplot(EPCenterline_new, aes(x=crash_count)) +
 
 #including segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_count)) + 
-  geom_histogram( fill="#e6a52f", binwidth = 10) +
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) +
   labs(title = "Distribution of Crash Numbers",
        subtitle = "El Paso,TX") +
   plotTheme()
@@ -1287,7 +1287,7 @@ ggplot(EPCenterline_new, aes(x=crash_count)) +
 ```{r road centerlines by crash len histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_len)) + 
-  geom_histogram(fill="#e6a52f", binwidth = 10) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
   labs(title = "Distribution of Crash Numbers (0 Excluded)",
        subtitle = "El Paso,TX") +
   scale_x_continuous(limits = c(1, 150)) +
@@ -1295,7 +1295,7 @@ ggplot(EPCenterline_new, aes(x=crash_len)) +
 
 #including segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_len)) + 
-  geom_histogram(fill="#e6a52f", binwidth = 10) +
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) +
   labs(title = "Distribution of Crash Numbers",
        subtitle = "El Paso,TX") +
   plotTheme()
