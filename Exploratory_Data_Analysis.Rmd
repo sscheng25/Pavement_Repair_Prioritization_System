@@ -548,7 +548,7 @@ hydrology <- area_water('TX', county = 141) %>%
   st_as_sf()%>%
   st_transform('ESRI:102339')
 
-EPhydrology <- st_intersection(El_Paso_city, hydrology)
+EPhydrology <- st_intersection(hydrology, El_Paso_city)
 ```
 
 ```{r visualize hydrology, message=FALSE, warning=FALSE}
@@ -1352,6 +1352,11 @@ crash_centerlines_clean <- crash_centerlines %>%
   dplyr::select(Crash_ID, index) %>% st_drop_geometry()
 ```
 
+```{r}
+
+
+```
+
 ```{r summarizing crashes by centerline, message=FALSE, warning=FALSE}
 # count crashes per street segment
 crash_groupings <- crash_centerlines_clean %>% 
@@ -1372,6 +1377,17 @@ EPCenterline_new <-
 
 # convert to numeric
 EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len))
+```
+
+```{r}
+# map crashes by length
+crash_breaks = c(1, 5, 10, 25, 100, 900)
+ggplot() +
+  geom_sf(data = EPCenterline_new, aes(color = crash_len)) +
+  scale_color_viridis(direction=-1, option='G', breaks=crash_breaks, limits=c(1,100))+
+  labs(title = "Crashes in 2018",
+       subtitle = "El Paso, TX") +
+  mapTheme()
 ```
 
 The distribution of crash data is also left-skewed, with a range of 0 to156 for the crash numbers and 0 to 881 crashes per 100 meters.
