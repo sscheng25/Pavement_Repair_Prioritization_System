@@ -1087,7 +1087,7 @@ ggplot(land_use_majority_sf, aes(y=land_use_type)) +
 
 ## 4.4 Joining Data Together
 
-In this part, we make the data layers we processed before “talk” to each other.
+In this part, we make the data layers we processed before "talk" to each other.
 
 ### 4.4.1 Potholes Data
 
@@ -1173,7 +1173,7 @@ ggplot(EPCenterline_new, aes(x=potholes_count)) +
 
 ```
 
-```{r plot of potholes per 100 meter message=FALSE, warning=FALSE}
+```{r plot of potholes per 100 meter, message=FALSE, warning=FALSE}
 # excluding segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_len)) + 
   geom_histogram(color="white",fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
@@ -1196,7 +1196,7 @@ ggplot(EPCenterline_new, aes(x=potholes_len)) +
 
 ### 4.4.2 Waze Data
 
-Similar to what we’ve done to the potholes data, we also join the waze jam data points to the buffered pavement segments and count the number of jams. Jams per 100 meters is recognized as the feature which will be put into the prediction model.
+Similar to what we've done to the potholes data, we also join the waze jam data points to the buffered pavement segments and count the number of jams. Jams per 100 meters is recognized as the feature which will be put into the prediction model.
 
 ```{r join waze data into street buffer}
 #join waze jam data to EPCenterline_buffer using nearest feature
@@ -1551,7 +1551,7 @@ We also examine the correlations of PCI values and some categorical variables.
 
 #### RouteType and PCI
 
-We can tell from the barplot below that there is a slight difference on average PCI values between different Tiger/Line route types. Route type “O” has the highest average PCI value while “U” has the lowest average PCI.
+We can tell from the barplot below that there is a slight difference on average PCI values between different Tiger/Line route types. Route type "O" has the highest average PCI value while "U" has the lowest average PCI.
 
 ```{r routetype pci correlation}
 tl_roads_PCI <- st_join(tl_roads, EPCenterline_new4, join=st_nearest_feature)
