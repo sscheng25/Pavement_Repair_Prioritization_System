@@ -204,6 +204,9 @@ tl_roads <- st_read("Data/tl_2018_roads/tl_2018_48141_roads.shp") %>%
 EPcity_landcover <-
   raster("Data/Data_NLCD/ElPasoArea_LandCover_ImperviousCover/NLCD_2019_Land_Cover_L48_20210604_hHjclStONh9yCsFQkZ5z.tiff")
 
+floodzones <- st_read("Data/FloodZones/FloodZone.shp" )%>%
+  st_transform('ESRI:102339')
+
 ```
 
 Here we also import GeoJSON files for the boundary of El Paso city and county for our reference. The spatial limit for this project is the City of El Paso.
@@ -538,7 +541,7 @@ ggplot()+
 ```
 
 ## 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
-At this point we also import the hydrology features from the US Census.
+At this point we also import the hydrology features from the US Census. We can see from the map below that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
 
 ```{r import hydrology from census message=FALSE, warning=FALSE}
 hydrology <- area_water('TX', county = 141) %>%
@@ -555,7 +558,31 @@ ggplot()+
   labs(title="Hydrology Across the City",
        subtitle="El Paso, TX", caption="Source: US Census - TIGER/Line Shapefiles") + mapTheme()
 ```
+## 4.2.3 El Paso FEMA Flood Zones
+We also investigate the FEMA-designated flood zones across the city.
+```{r clip flood zones to city, message=FALSE, warning=FALSE}
+# clip flood zones to city bounds
+EPcity_floodzones <- st_intersection(floodzones, El_Paso_city)
 
+# Combining AE and A1-30
+# Why? Zone AE and A1-30 are areas subject to inundation by the 1-percent-annual-chance flood event determined by detailed methods. Base Flood Elevations (BFEs) are shown.
+
+# list of A zones
+Azones <- c("A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11", "A12", "A13", "A14", "A15", "A16", "A17", "A18", "A19", "A20", "A21", "A22", "A23", "A30", "AE")
+
+
+EPcity_floodzones$ZONE[EPcity_floodzones$ZONE %in% Azones] <- "AE, A1-30"
+```
+
+```{r visualize flood zones, message=FALSE, warning=FALSE}
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EPcity_floodzones, aes(fill=ZONE), color="transparent")+
+  #scale_fill_viridis_d(direction=-1, option='G')+
+  labs(title="FEMA Flood Zones in El Paso",
+       fill= "Zone",
+       subtitle="El Paso, TX", caption="Source: City of El Paso; FEMA") + mapTheme()
+```
 ## 4.3 Data Wrangling and Feature Engineering
 
 ### 4.3.1 Data Wrangling on Centerline-related datasets
