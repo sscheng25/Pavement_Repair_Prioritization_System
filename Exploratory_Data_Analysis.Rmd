@@ -10,12 +10,12 @@ output:
 editor_options:
   chunk_output_type: inline
 ---
+
 # 0. Set Up
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = FALSE)
 ```
-
 
 ```{r libraries, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
@@ -59,7 +59,6 @@ palette_3 <-c("#e6a52f","#08519c", "#e76420")
 
 ```
 
-
 ```{r add plot and map themes for default visualizations, message=FALSE, warning=FALSE}
 mapTheme <- function(base_size = 12) {
   theme(
@@ -102,18 +101,15 @@ plotTheme <- function(base_size = 12) {
 
 ```
 
-
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
 source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 ```
 
-
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Jenna.R")
+# source("Jenna.R")
 ```
-
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
@@ -122,15 +118,9 @@ source("Jenna.R")
 
 # 1. Project Introduction
 
-
-
 # 2. Use Case
 
-
-
 # 3. Road Research
-
-
 
 # 4. Exploratory Data Analysis
 
@@ -138,21 +128,20 @@ source("Jenna.R")
 
 To begin with, we import various data layers from local sources, and the datasets include,
 
-- CIP_layer: Centerlines included in the Capital Improvement Program
-- centerline_with_age: Centerlines in El Paso with the year of resurfacing and PCI values
-- EPCenterline: Centerlines in El Paso with properties like CLASS
-- zoning: El Paso city zoning
-- potholes: Potholes data in El Paso
-- waze_data: Waze traffic jam data in El Paso
-- VMT: Vehicle miles traveled per census blockgroup in El Paso
-- crash18: Crash data in El Paso in 2018
-- roadbed_base: Roadbed base properties of street segments
-- roadbed_surface: Roadbed surface properties of street segments
-- tl_roads: TIGER/Line shapefile with road properties in El Paso
-- EPcity_landcover: Landcover raster data of El Paso
+-   CIP_layer: Centerlines included in the Capital Improvement Program
+-   centerline_with_age: Centerlines in El Paso with the year of resurfacing and PCI values
+-   EPCenterline: Centerlines in El Paso with properties like CLASS
+-   zoning: El Paso city zoning
+-   potholes: Potholes data in El Paso
+-   waze_data: Waze traffic jam data in El Paso
+-   VMT: Vehicle miles traveled per census blockgroup in El Paso
+-   crash18: Crash data in El Paso in 2018
+-   roadbed_base: Roadbed base properties of street segments
+-   roadbed_surface: Roadbed surface properties of street segments
+-   tl_roads: TIGER/Line shapefile with road properties in El Paso
+-   EPcity_landcover: Landcover raster data of El Paso
 
 These datasets are the basis for the future data wrangling, feature engineering, and exploratory analysis process.
-
 
 ```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
 # Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4203).
@@ -292,7 +281,6 @@ EP_ethnicity_county <- EP_ethnicity_county  %>%
 EP_ethnicity <- st_intersection(EP_ethnicity_county, El_Paso_city)
 ```
 
-
 ```{r census_demographics_age}
 #loading age data by tract - use E variables for estimate values
 ageVar <- ACSvar %>%
@@ -321,7 +309,6 @@ EP_age <- st_intersection(EP_age_county, El_Paso_city)
 
 ```
 
-
 ```{r census_age_var_labels, message=FALSE, warning=FALSE}
 ageVarLabels <- ACSvar %>%
   filter(concept=="SEX BY AGE")
@@ -341,13 +328,11 @@ ageVarLabels <- ageVarLabels %>% dplyr::rename(LABEL = label)
 
 ```
 
-
 ```{r census_age_var_rename_match, message=FALSE, warning=FALSE}
 EP_age_new <- EP_age %>%
       rename_at(as.vector(na.omit(ageVarLabels$VAR_NAME[match(names(EP_age), ageVarLabels$VAR_NAME)])),
                ~as.vector(na.omit(ageVarLabels$LABEL[match(names(EP_age), ageVarLabels$VAR_NAME)])))
 ```
-
 
 ```{r census_demo_age_charts, message=FALSE, warning=FALSE}
 # transform data to long
@@ -365,7 +350,6 @@ EP_age_long <- EP_age_long %>%
 EP_age_long_nototal<-EP_age_long[!(EP_age_long$Sex=="Total" | EP_age_long$variable=="Total_Male_" | EP_age_long$variable=="Total_Female_"),]
 
 ```
-
 
 ```{r population pyramid, message=TRUE, warning=TRUE}
 for (i in 1:nrow(EP_age_long_nototal)) {
@@ -445,7 +429,7 @@ ggplot()+
 
 ### 4.2.2 El Paso Socioeconomics (data from 2019 5yr ACS)
 
-We also get some socioeconomic factors from ACS datasets. 
+We also get some socioeconomic factors from ACS datasets.
 
 ```{r census data, Socioeconomics}
 
@@ -475,7 +459,6 @@ EP_econ <- st_intersection(EP_econ_county, El_Paso_city)
 
 ```
 
-
 ```{r census_socioecon_maps, message=FALSE, warning=FALSE}
 econ_long <- EP_econ%>%
   dplyr::select(GEOID,NAME, med_hh_income, med_rent, pct_transport_to_work)%>%
@@ -495,7 +478,7 @@ econ_long <- EP_econ%>%
 # do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Selected Socioeconomics by Census Tract", bottom = "Source: US Census, ACS 2019"))
 ```
 
-Median household income also has an impact on the local infrastructure construction and repairment. Furthermore, it’s a good way to examine the equity of resource allocation by check the difference between high- and low-income tracts.
+Median household income also has an impact on the local infrastructure construction and repairment. Furthermore, it's a good way to examine the equity of resource allocation by check the difference between high- and low-income tracts.
 
 ```{r census_socioecon_hhincome_map, message=FALSE, warning=FALSE}
 #Median household income
@@ -538,7 +521,7 @@ ggplot()+
 
 In this part, we start diving deeper into the existing datasets. To begin with, we apply data cleaning and wrangling on EPCenterline data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
 
-Then we remove some duplicated “LOCAL” classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories, LOCAL, MINOR, MAJOR, and COLLECTOR, and most of the existing pavement segments belong to LOCAL category.
+Then we remove some duplicated "LOCAL" classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories, LOCAL, MINOR, MAJOR, and COLLECTOR, and most of the existing pavement segments belong to LOCAL category.
 
 ```{r EP centerlines, message=FALSE, warning=FALSE}
 # delete duplicated "LOCAL" class
@@ -561,7 +544,6 @@ EPCenterline <-
 
 # unique(EPCenterline$CLASS)
 ```
-
 
 ```{r EP centerlines ggplots, message=FALSE, warning=FALSE}
 ggplot() +
@@ -641,7 +623,6 @@ ggplot(plan_area_PCI, aes(x=PCI, y=PLANAREA)) +
        subtitle = "El Paso, TX") + plotTheme()
 ```
 
-
 ```{r centerline data with MUNR City of El Paso, message=FALSE, warning=FALSE}
 ggplot() +
   geom_sf(data = El_Paso_city, color="grey") +
@@ -669,7 +650,6 @@ ggplot(EPCenterline_with_PCI, aes(y=PCI_2018), color="grey") +
   labs(title = "PCI Distribution",
        subtitle = "El Paso, TX") + plotTheme()
 ```
-
 
 ```{r pavements with negative PCIs, message=FALSE, warning=FALSE}
 negative_PCI_list <-
@@ -704,7 +684,6 @@ EPCenterline_with_PCI <-
   rename(StreetName_EP = STREETNAME.x, StreetName_Age = STREETNAME.y)
 
 ```
-
 
 ```{r centerline with pci no negatives, message=FALSE, warning=FALSE}
 
@@ -745,7 +724,7 @@ waze_data$x_coor <- x_fin$x_coor
 waze_data$y_coor <- y_fin$y_coor
 ```
 
-As is shown in the histogram below, most of the traffic jams collected in waze dataset are heavy and moderate traffic jams, with a few NAs and very few light traffic. This is probably because people do not tend to report light traffic to waze database. The map of waze data points reveals that most of the congestions occur along the main roads in the city. We also do research on the NAs of waze data, and according to our client, that’s probably other categories of waze data which are assigned to the NA group in our project.
+As is shown in the histogram below, most of the traffic jams collected in waze dataset are heavy and moderate traffic jams, with a few NAs and very few light traffic. This is probably because people do not tend to report light traffic to waze database. The map of waze data points reveals that most of the congestions occur along the main roads in the city. We also do research on the NAs of waze data, and according to our client, that's probably other categories of waze data which are assigned to the NA group in our project.
 
 ```{r process waze jam data 2, message=FALSE, warning=FALSE}
 waze_sf <-
@@ -764,7 +743,6 @@ ggplot(waze_sf, aes(y=Subtype)) +
   labs(title = "Waze Jams Count by Subtype",
        subtitle = "El Paso, TX") + plotTheme()
 ```
-
 
 ```{r waze data NAs, message=FALSE, warning=FALSE}
 ggplot() +
@@ -791,7 +769,6 @@ potholes_sf <-
 
 ```
 
-
 ```{r grouping pot holes data by year 1, message=FALSE, warning=FALSE}
 potholes_sf$YEAR <- format(mdy_hms(potholes_sf$ACTUALFINISHDATE), format='%Y')
 glimpse(potholes_sf)
@@ -809,14 +786,12 @@ potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 
 ```
 
-
 ```{r grouping pot holes data by year 2, message=FALSE, warning=FALSE}
 # new sf with last five years of points data only for easier legibility on maps
 potholes_sf_2016to2018 <- potholes_sf %>% subset(YEAR > 2015 & YEAR < 2019)
 potholes_sf_2019to2021 <- potholes_sf %>% subset(YEAR > 2018)
 potholes_sf_2018 <- potholes_sf %>% subset(YEAR == 2018)
 ```
-
 
 ```{r 2018 streets and potholes map, message=FALSE, warning=FALSE}
 # 2018 potholes map
@@ -828,7 +803,6 @@ ggplot() +
   labs(title = "Potholes and Centerlines in 2018",
        subtitle = "El Paso, TX") + mapTheme()
 ```
-
 
 ```{r lots of potholes maps, message=FALSE, warning=FALSE}
 # 2016-2018 map
@@ -853,6 +827,7 @@ ggplot(potholes_sf, aes(y=YEAR)) +
        subtitle = "El Paso, TX") + plotTheme()
 
 ```
+
 ```{r}
 library(gganimate)
 library(gifski)
@@ -870,19 +845,6 @@ potholes_animation <-
    transition_time(YEAR)
 
 gganimate::animate(potholes_animation, duration=10, renderer = gifski_renderer())
-```
-
-
-```{r centerline buffer and potholes work}
-#create centerline buffer of 24ft and centerline buffer
-EPCenterline_buffer <- st_buffer(EPCenterline_with_PCI, dist=24) %>% st_as_sf()
-
-#join potholes to EPCenterline_buffer using nearest feature
-potholes_centerlines <-  st_join(potholes_sf, EPCenterline_buffer, join = st_nearest_feature)
-
-#clean up to make it easier
-potholes_centerlines_clean <- potholes_centerlines %>%
-  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
 ```
 
 ### 4.3.2 Visualzations
@@ -942,6 +904,7 @@ ggplot() +
 ```
 
 ### 4.3.3 Land Cover Exploration
+
 Lots of raster data operations!
 
 ```{r read in el paso city land cover raster, message=FALSE, warning=FALSE}
@@ -949,12 +912,10 @@ Lots of raster data operations!
 plot(EPcity_landcover)
 ```
 
-
 ```{r reproject raster, message=FALSE, warning=FALSE}
 EPcity_landcover_reproject <- projectRaster(EPcity_landcover,
                                        crs = crs(El_Paso_city))
 ```
-
 
 ```{r crop and mask raster, message=FALSE, warning=FALSE}
 # Crop raster data by extent of state subset
@@ -965,7 +926,6 @@ EPcity_landcover_crop <- mask(EPcity_landcover_crop, El_Paso_city)
 plot(EPcity_landcover_crop)
 
 ```
-
 
 ```{r create function for converting raster to df, message=FALSE, warning=FALSE}
 rasterdf <- function(x, aggregate = 1) {
@@ -994,13 +954,11 @@ rasterdf <- function(x, aggregate = 1) {
 
 ```
 
-
 ```{r convert NLCD raster to df, message=FALSE, warning=FALSE}
 # convert to df
 EPcity_landcover_df <- rasterdf(EPcity_landcover_crop)
 #EPcity_landcover_df
 ```
-
 
 ```{r map codes to names and pull colors from TIFF legend, message=FALSE, warning=FALSE}
 LCcodes <- c(11,12,21,22,23,24,31,41,42,43,52,71,81,82,90,95)
@@ -1028,7 +986,6 @@ names(LCcolors) <- as.character(LCcodes)
 LCcolors
 
 ```
-
 
 ```{r map the final land cover raster with all groups, message=FALSE, warning=FALSE}
 ggplot(data = EPcity_landcover_df) +
@@ -1088,7 +1045,6 @@ library(leaflet)
 # # + title = "NLCD")
 ```
 
-
 ### 4.3.4 Land Use Exploration
 
 ```{r land use visualization, message=FALSE, warning=FALSE}
@@ -1129,10 +1085,21 @@ ggplot(land_use_majority_sf, aes(y=land_use_type)) +
 
 ```
 
-
 ## 4.4 Joining Data Together
 
 ### 4.4.1 Potholes Data
+
+```{r centerline buffer and potholes work}
+#create centerline buffer of 24ft and centerline buffer
+EPCenterline_buffer <- st_buffer(EPCenterline_with_PCI, dist=24) %>% st_as_sf()
+
+#join potholes to EPCenterline_buffer using nearest feature
+potholes_centerlines <-  st_join(potholes_sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+potholes_centerlines_clean <- potholes_centerlines %>%
+  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
+```
 
 ```{r potholes per street segment and merging back with centerline data}
 # count potholes per street segment
@@ -1156,7 +1123,6 @@ EPCenterline_new$potholes_len <- as.numeric(as.character(EPCenterline_new$pothol
 
 ```
 
-
 ```{r visualize street centerline segments by potholes count, message=FALSE, warning=FALSE}
 # only mapping when potholes are greater than or equal to 1
 # log transformed so make it easier to see
@@ -1167,7 +1133,7 @@ potholes_breaks = c(1, 5, 10, 25,210)
 ggplot() +
   geom_sf(data=El_Paso_city, color="grey")+
   geom_sf(data = EPCenterline_new%>%  filter(potholes_count > 0), aes(color = potholes_count)) +
-  scale_colour_viridis(option='G',  direction=-1, trans = "log", breaks=potholes_breaks, labels=my_breaks, limits = c(1, 250),
+  scale_colour_viridis(option='G',  direction=-1, trans = "log", breaks=potholes_breaks, labels=potholes_breaks, limits = c(1, 250),
                        name="Number of potholes\n")+
   labs(title = "Road Centerlines by Number of Potholes",
        x= "Number of Potholes",
@@ -1177,13 +1143,12 @@ ggplot() +
 ggplot() +
   geom_sf(data=El_Paso_city, color="grey")+
   geom_sf(data = EPCenterline_new %>%  filter(potholes_len > 0), aes(color = potholes_len)) +
-  scale_colour_viridis(option='G', direction=-1, trans = "log", breaks=potholes_breaks, labels=my_breaks, limits = c(1, 210),
+  scale_colour_viridis(option='G', direction=-1, trans = "log", breaks=potholes_breaks, labels=potholes_breaks, limits = c(1, 210),
                        name="Number of potholes \nby road length\n")+
   labs(title = "Road Centerlines by Number of Potholes by Length of Road",
        subtitle = "El Paso, TX") + mapTheme()
 
 ```
-
 
 ```{r  centerlines by pothole count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 potholes
@@ -1201,10 +1166,11 @@ ggplot(EPCenterline_new, aes(x=potholes_count)) +
   plotTheme()
 
 ```
-```{r message=FALSE, warning=FALSE}
+
+```{r plot of potholes per 100 meter message=FALSE, warning=FALSE}
 # excluding segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_len)) + 
-  geom_histogram(fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
+  geom_histogram(color="white",fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
   labs(title = "Distribution of Potholes Numbers by Road Length (0 Excluded)",
         x="Potholes by Road Length",
        y="Count of Road Segments",
@@ -1213,7 +1179,7 @@ ggplot(EPCenterline_new, aes(x=potholes_len)) +
 
 # including segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_len)) + 
-  geom_histogram(fill="#e6a52f", binwidth = 10) + 
+  geom_histogram(color="white",fill="#e6a52f", binwidth = 10) + 
   labs(title = "Distribution of Potholes Numbers by Road Length",
        x="Potholes by Road Length",
        y="Count of Road Segments",
@@ -1232,7 +1198,6 @@ waze_centerlines <-  st_join(waze_sf, EPCenterline_buffer, join = st_nearest_fea
 waze_centerlines_clean <- waze_centerlines %>%
   st_drop_geometry()
 ```
-
 
 ```{r waze jams per streetsegment and merging back with centerline data}
 # count jams per street segment
@@ -1280,7 +1245,6 @@ crash_centerlines_clean <- crash_centerlines %>%
   dplyr::select(Crash_ID, index) %>% st_drop_geometry()
 ```
 
-
 ```{r summarizing crashes by centerline, message=FALSE, warning=FALSE}
 # count crashes per street segment
 crash_groupings <- crash_centerlines_clean %>% 
@@ -1302,7 +1266,6 @@ EPCenterline_new <-
 # convert to numeric
 EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len))
 ```
-
 
 ```{r road centerlines by crash count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
@@ -1337,6 +1300,7 @@ ggplot(EPCenterline_new, aes(x=crash_len)) +
        subtitle = "El Paso,TX") +
   plotTheme()
 ```
+
 ### 4.4.4 VMT Data
 
 ```{r VMT data, message=FALSE, warning=FALSE}
@@ -1358,6 +1322,7 @@ VMT_sf <-
   mutate(VMT_pop = VMT/total_pop) %>%
   st_transform('ESRI:102339')
 
+VMT_sf2 <- VMT_sf %>% drop_na()
 ggplot() +
   geom_sf(data = VMT_sf2, aes(fill = VMT_pop)) +
   scale_fill_viridis(direction=-1, option='G')+
@@ -1366,10 +1331,7 @@ ggplot() +
   mapTheme()
 
 
-VMT_sf2 <- VMT_sf %>% drop_na()
-
 ```
-
 
 ```{r merging VMT data into EPCenterline_new, message=FALSE, warning=FALSE}
 VMT_centerlines <- 
@@ -1439,7 +1401,6 @@ ggplot(roadbed_base_PCI, aes(y=BASE_TYPE_)) +
 
 ```
 
-
 ```{r roadbed surface material, message=FALSE, warning=FALSE}
 roadbed_surface <- roadbed_surface %>%
   st_transform('ESRI:102339')
@@ -1455,7 +1416,6 @@ ggplot(roadbed_surface_PCI, aes(y=SRFC_TYPE)) +
        subtitle = "El Paso, TX") +
   plotTheme()
 ```
-
 
 ```{r paved status, message=FALSE, warning=FALSE}
 paved_status <- EPCenterline_new[c('STATUS','index')]
@@ -1500,7 +1460,6 @@ EPCenterline_new4 <- EPCenterline_new3 %>%
   dplyr::select(-PCI_2018.y) %>%
   rename(PCI_2018=PCI_2018.x)
 ```
-
 
 ## 4.5 Correlation Exploration
 
@@ -1561,7 +1520,6 @@ ggcorrplot(
 #   insig = "blank") +  
 #   labs(title = "Correlation Matrix for Numeric Variables") 
 ```
-
 
 ### 4.5.2 Categorical Correlations
 
