@@ -136,6 +136,24 @@ source("Jenna.R")
 
 ## 4.1 Importing Local Data
 
+To begin with, we import various data layers from local sources, and the datasets include,
+
+- CIP_layer: Centerlines included in the Capital Improvement Program
+- centerline_with_age: Centerlines in El Paso with the year of resurfacing and PCI values
+- EPCenterline: Centerlines in El Paso with properties like CLASS
+- zoning: El Paso city zoning
+- potholes: Potholes data in El Paso
+- waze_data: Waze traffic jam data in El Paso
+- VMT: Vehicle miles traveled per census blockgroup in El Paso
+- crash18: Crash data in El Paso in 2018
+- roadbed_base: Roadbed base properties of street segments
+- roadbed_surface: Roadbed surface properties of street segments
+- tl_roads: TIGER/Line shapefile with road properties in El Paso
+- EPcity_landcover: Landcover raster data of El Paso
+
+These datasets are the basis for the future data wrangling, feature engineering, and exploratory analysis process.
+
+
 ```{r load data sources in github repo, message=FALSE, warning=FALSE, results='hide'}
 # Projection CRS: ESRI 102339 (NAD_1983_HARN_StatePlane_Texas_Central_FIPS_4203).
 CIP_layer <- st_read("Data/Resurfacing/CIP_PRogram_Master_Layer.shp") %>%
@@ -177,7 +195,7 @@ EPcity_landcover <-
 
 ```
 
-Boundary data of El Paso County downloaded from [Texas Open Data Portal](https://data.texas.gov/dataset/Texas-Counties-Map/48ag-x9aa).
+Here we also import GeoJSON files for the boundary of El Paso city and county for our reference. The spatial limit for this project is the City of El Paso.
 
 ```{r boundary data of El Paso county and city, message=FALSE, warning=FALSE, results='hide'}
 texas <-
@@ -201,6 +219,8 @@ El_Paso_city <-
 ## 4.2 Importing Census Data
 
 ### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
+
+To get more sense about our study area, we introduce various kinds of census data from ACS 2019 5 year dataset. First, we take a look at the demographics, including race, ethnicity, and age groups.
 
 ```{r census_demographics, message=FALSE, warning=FALSE}
 # census data
@@ -372,6 +392,8 @@ pop_pyramid$variable[pop_pyramid$variable == "65 and 66 years" | pop_pyramid$var
 
 ```
 
+Taking a look at the population pyramid, we can tell the age structure of El Paso city tend to be young, and the working population accounts for a large proportion of the total population, which means there is a high everyday commute demand in our study area.
+
 ```{r message=FALSE, warning=FALSE}
 ggplot(pop_pyramid, aes(x = variable, fill = Sex,
                  y = ifelse(test = Sex == "Male",
@@ -382,6 +404,8 @@ ggplot(pop_pyramid, aes(x = variable, fill = Sex,
   labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
   coord_flip() + plotTheme()
 ```
+
+The diverse distribution of race and ethnicity can assist us in the future cross validation process and serve as a reference on equity control.
 
 ```{r census_demo_maps, message=FALSE, warning=FALSE}
 
@@ -420,6 +444,8 @@ ggplot()+
 ```
 
 ### 4.2.2 El Paso Socioeconomics (data from 2019 5yr ACS)
+
+We also get some socioeconomic factors from ACS datasets. 
 
 ```{r census data, Socioeconomics}
 
@@ -469,6 +495,8 @@ econ_long <- EP_econ%>%
 # do.call(grid.arrange,c(mapList_econ, ncol = 3, top = "Selected Socioeconomics by Census Tract", bottom = "Source: US Census, ACS 2019"))
 ```
 
+Median household income also has an impact on the local infrastructure construction and repairment. Furthermore, it’s a good way to examine the equity of resource allocation by check the difference between high- and low-income tracts.
+
 ```{r census_socioecon_hhincome_map, message=FALSE, warning=FALSE}
 #Median household income
 ggplot()+
@@ -479,6 +507,8 @@ ggplot()+
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
 ```
 
+Median rent can reflect the state of the community's infrastructure to some extent and pavement condition is an important part of the local infrastructure. Thus, we assume that the median rent can somewhat reveal the local pavement conditions and serve as a reference for our decision making process.
+
 ```{r census_socioecon_medianrent_map, message=FALSE, warning=FALSE}
 #Median rent
 ggplot()+
@@ -488,6 +518,8 @@ ggplot()+
        fill="Dollars ($)",
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
 ```
+
+The percentage of local population who takes public transit to work has a lower level of usage on the pavements nearby. By looking at this feature, we can get a basic sense of the local public transportation utilization.
 
 ```{r census_socioecon_transport_map, message=FALSE, warning=FALSE}
 #pct transport to work map
@@ -503,6 +535,10 @@ ggplot()+
 ### 4.3.1 Data Wrangling on Centerline-related datasets
 
 #### Centerline and PCI exploration
+
+In this part, we start diving deeper into the existing datasets. To begin with, we apply data cleaning and wrangling on EPCenterline data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
+
+Then we remove some duplicated “LOCAL” classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories, LOCAL, MINOR, MAJOR, and COLLECTOR, and most of the existing pavement segments belong to LOCAL category.
 
 ```{r EP centerlines, message=FALSE, warning=FALSE}
 # delete duplicated "LOCAL" class
@@ -542,6 +578,7 @@ ggplot(EPCenterline, aes(y=CLASS)) +
 
 ```
 
+We prepare centerline data with PCI values from 2018 and the latest resurfacing year by joining EPCenterline to centerline_with_age. We add a column of index for each pavement segment at this stage for any future joins and spatial joins. Since we select pavement segments as one of our spatial units, we calculate the length of each segment as a feature for future application.
 
 ```{r prepare centerline data with PCI values from 2018, message=FALSE, warning=FALSE}
 #join with centerline with age so we can include PCI info
@@ -563,6 +600,7 @@ EPCenterline_with_PCI <-
   mutate(pave_length = st_length(geometry))
 ```
 
+Here we focus on fundamental visualizations on the features of EPCenterline_with_PCI. As is shown in the plots below, LOCAL and COLLECTOR segments have higher average PCI values, while segments in MAJOR class tend to have more problems in pavement condition. When it comes to different planning areas, segments in Northwest El Paso and the Art Craft region have better pavement conditions, while the central region performs poorly.
 
 ```{r explore centerline data with PCI values from 2018 with visuals, message=FALSE, warning=FALSE}
 ggplot(EPCenterline_with_PCI, aes(y=CLASS)) +
@@ -613,6 +651,7 @@ ggplot() +
        subtitle = "El Paso, TX") + mapTheme()
 ```
 
+We plot the histogram of the PCI distribution here, and we can detect some negative PCI values from the plot. After discussion with our client, we decide to remove these negative PCIs because these street segments are highways, interstates, private roads, etc., which are out of our project scope. After getting rid of the negative PCIs, we get a new PCI distribution which shows three peaks in numbers at the value of 98-100, 80-85, and 58-63 respectively.
 
 ```{r centerline with pci, message=FALSE, warning=FALSE}
 # glimpse(centerline_with_age)
@@ -680,6 +719,8 @@ ggplot() +
 
 #### Waze jam data exploration
 
+To get the X and Y coordinates for waze jam data, we apply some string extraction on the raw waze data and build up a spatial data frame.
+
 ```{r process the waze data 1, message=FALSE, warning=FALSE}
 x_fin <- data.frame()
 y_fin <- data.frame()
@@ -704,6 +745,7 @@ waze_data$x_coor <- x_fin$x_coor
 waze_data$y_coor <- y_fin$y_coor
 ```
 
+As is shown in the histogram below, most of the traffic jams collected in waze dataset are heavy and moderate traffic jams, with a few NAs and very few light traffic. This is probably because people do not tend to report light traffic to waze database. The map of waze data points reveals that most of the congestions occur along the main roads in the city. We also do research on the NAs of waze data, and according to our client, that’s probably other categories of waze data which are assigned to the NA group in our project.
 
 ```{r process waze jam data 2, message=FALSE, warning=FALSE}
 waze_sf <-
@@ -734,6 +776,8 @@ ggplot() +
 ```
 
 #### Potholes data exploration
+
+To deal with the potholes data, we first assign spatial coordinates to the data points with our CRS and drop some NA rows. Then we filter out some incorrectly recorded data and group the potholes data by year. We make the map of the pothole data points of 2016-2018 and 2019-2021 below, and plot the distribution of pothole numbers by year.
 
 ```{r process pot holes data to sf, message=FALSE, warning=FALSE}
 potholes_sf <-
