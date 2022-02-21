@@ -117,34 +117,32 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 ```
 
 # 1. Project Introduction
+
 The city of El Paso, Texas has been experiencing tremendous growth over the past decade. With growing population comes more pressure - literally - on roads.
 
-There is hope that passage of the Bipartisan Infrastructure Bill in congress will allow for more funding for streets and maintenance projects to help the city’s road network become safer and more resilient - but the eventual funding from “Build Back Better” still leaves decision-making process of which local roads to update up to the city. 
-
+There is hope that passage of the Bipartisan Infrastructure Bill in congress will allow for more funding for streets and maintenance projects to help the city's road network become safer and more resilient - but the eventual funding from "Build Back Better" still leaves decision-making process of which local roads to update up to the city.
 
 # 2. Use Case
-The City of El Paso’s Capital Improvement Department (Planning Division) wishes to improve their system for deciding where to allocate capital improvement funds for roadway projects. Presently, this is done by integrating spatial data sets reflecting current conditions to determine where there is need and opportunity.
+
+The City of El Paso's Capital Improvement Department (Planning Division) wishes to improve their system for deciding where to allocate capital improvement funds for roadway projects. Presently, this is done by integrating spatial data sets reflecting current conditions to determine where there is need and opportunity.
 
 There currently is not an established prioritization system when it comes to which roads to improve - or even add to the queue for improvement. PCI scores inform the decision making, but lots of the decisions are ad hoc. For example, constituents raise concerns about certain roads, the department looks at the Pavement Condition Index (PCI) score, and if it is below a certain threshold, then they add it to the list of projects for improvement. This is a very reactive process. They would like it to be more proactive.
 
-But PCI also does not tell the whole story, and the client has expressed interest in exploring other factors that may drive a new prioritization system. 
+But PCI also does not tell the whole story, and the client has expressed interest in exploring other factors that may drive a new prioritization system.
 
-This project is two-pronged:
-- First, we have the predictive model. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
+This project is two-pronged: - First, we have the predictive model. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
 
-- The second part of our project is the prioritization system, which will take the form of a we application. We will incorporate PCI (our modeled score or more likely the PCI used by the city) as just one piece of a resource application and prioritization system. We will be exploring factors to drive the new system that include both built and social environmental variables, thus bringing a lens of equity into the project.
-
+-   The second part of our project is the prioritization system, which will take the form of a we application. We will incorporate PCI (our modeled score or more likely the PCI used by the city) as just one piece of a resource application and prioritization system. We will be exploring factors to drive the new system that include both built and social environmental variables, thus bringing a lens of equity into the project.
 
 # 3. Background Research
 
 ## 3.1. Pavement Condition Index (PCI)
 
-A Pavement Condition Index (PCI) measures the quality of a specific road segment. The Capital Improvements Department in El Paso hired a private contractor in 2018 to conduct a digital image scan of the city’s roads to evaluate them based on a wide range of conditions. While their exact metrics are proprietary, generally, PCIs are based off of factors such as presence of potholes, bumps, or cracks. The index ranges from a qualitative scale of Failing to Good or quantitatively 0 to 100. We found this chart from an Army Corps of Engineers’ study in which they show a significant drop in condition of a road after a certain amount of time. We hope to include the cost savings calculations from this study in the second part of our project, the decision-making tool. This would be a strong advocacy tool for improving a road as well as a strong planning tool by considering the road’s lifetime. For now, this made us curious about the construction of roads and if there are any earlier stage indicators that could show signs of weakening conditions. 
+A Pavement Condition Index (PCI) measures the quality of a specific road segment. The Capital Improvements Department in El Paso hired a private contractor in 2018 to conduct a digital image scan of the city's roads to evaluate them based on a wide range of conditions. While their exact metrics are proprietary, generally, PCIs are based off of factors such as presence of potholes, bumps, or cracks. The index ranges from a qualitative scale of Failing to Good or quantitatively 0 to 100. We found this chart from an Army Corps of Engineers' study in which they show a significant drop in condition of a road after a certain amount of time. We hope to include the cost savings calculations from this study in the second part of our project, the decision-making tool. This would be a strong advocacy tool for improving a road as well as a strong planning tool by considering the road's lifetime. For now, this made us curious about the construction of roads and if there are any earlier stage indicators that could show signs of weakening conditions.
 
 ## 3.2. Anatomy of a Road
 
-To better inform our model, we want to understand the different parts of a road and what factors may lead to worsening conditions over time. We identified three main features to pay attention to: the earth foundation, the roadbed base, and the surface. The surface as an important feature is more obvious as potholes, bumps, and cracks are noticeable to the everyday road user. However, there are roads that have no base layer, weak materials, or are built in areas prone to flooding that can weaken the road’s structure as it ages. These are all important aspects of a road’s anatomy that we explored in the exploratory data analysis phase and their relationship to PCI.
-
+To better inform our model, we want to understand the different parts of a road and what factors may lead to worsening conditions over time. We identified three main features to pay attention to: the earth foundation, the roadbed base, and the surface. The surface as an important feature is more obvious as potholes, bumps, and cracks are noticeable to the everyday road user. However, there are roads that have no base layer, weak materials, or are built in areas prone to flooding that can weaken the road's structure as it ages. These are all important aspects of a road's anatomy that we explored in the exploratory data analysis phase and their relationship to PCI.
 
 # 4. Exploratory Data Analysis
 
@@ -508,7 +506,7 @@ Median household income also has an impact on the local infrastructure construct
 ```{r census_socioecon_hhincome_map, message=FALSE, warning=FALSE}
 #Median household income
 ggplot()+
-  geom_sf(data=EP_econ, aes(fill=med_rent), color="grey")+
+  geom_sf(data=EP_econ, aes(fill=med_hh_income), color="grey")+
   scale_fill_viridis(option='G', direction=-1)+
   labs(title="Median Household Income in 2019",
        fill="Dollars ($)",
