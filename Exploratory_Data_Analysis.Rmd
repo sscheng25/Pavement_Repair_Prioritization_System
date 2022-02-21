@@ -378,11 +378,12 @@ pop_pyramid$variable[pop_pyramid$variable == "65 and 66 years" | pop_pyramid$var
 
 Taking a look at the population pyramid, we can tell the age structure of El Paso city tend to be young, and the working population accounts for a large proportion of the total population, which means there is a high everyday commute demand in our study area.
 
-```{r message=FALSE, warning=FALSE}
+```{r plot the poplation pyramid, message=FALSE, warning=FALSE}
 ggplot(pop_pyramid, aes(x = variable, fill = Sex,
                  y = ifelse(test = Sex == "Male",
                             yes = -value, no = value))) + 
   geom_bar(stat = "identity") +
+  # geom_line(aes(x = "15 to 19 years"), color = "red", size=1) +
   scale_y_continuous(labels = abs, limits = max(pop_pyramid$value) * c(-1,1)) +
   scale_fill_manual(values=palette_2)+
   labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
@@ -828,7 +829,7 @@ ggplot(potholes_sf, aes(y=YEAR)) +
 
 ```
 
-```{r}
+```{r animated map}
 library(gganimate)
 library(gifski)
 library(transformr)
