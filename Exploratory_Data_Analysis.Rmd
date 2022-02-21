@@ -1087,7 +1087,11 @@ ggplot(land_use_majority_sf, aes(y=land_use_type)) +
 
 ## 4.4 Joining Data Together
 
+In this part, we make the data layers we processed before “talk” to each other.
+
 ### 4.4.1 Potholes Data
+
+To count the potholes on the road segments, we create a buffer of 24 ft for the pavement segments according to the road research above. Then we join the potholes data to the pavement buffer and count the number of potholes in each segment. After joining this feature back to the EPCenterline data frame, we calculate the number of potholes per 100 meters as the final feature applied in future model training and predicting process to get rid of the influence of different pavement length.
 
 ```{r centerline buffer and potholes work}
 #create centerline buffer of 24ft and centerline buffer
@@ -1150,6 +1154,8 @@ ggplot() +
 
 ```
 
+Here we make a histogram of the distribution of pothole numbers and pothole numbers per 100 meters. The histogram is tightly left-skewed and many of the road segments contain no potholes which indicates a better pavement condition.
+
 ```{r  centerlines by pothole count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_count)) + 
@@ -1190,6 +1196,8 @@ ggplot(EPCenterline_new, aes(x=potholes_len)) +
 
 ### 4.4.2 Waze Data
 
+Similar to what we’ve done to the potholes data, we also join the waze jam data points to the buffered pavement segments and count the number of jams. Jams per 100 meters is recognized as the feature which will be put into the prediction model.
+
 ```{r join waze data into street buffer}
 #join waze jam data to EPCenterline_buffer using nearest feature
 waze_centerlines <-  st_join(waze_sf, EPCenterline_buffer, join = st_nearest_feature)
@@ -1223,6 +1231,8 @@ EPCenterline_new$waze_len <- as.numeric(as.character(EPCenterline_new$waze_len))
 ```
 
 ### 4.4.3 Crash Data (2018 only)
+
+In this part, we start processing crash data in 2018. Geometry is assigned to the data frame and the data points are spatially joined to the buffered pavement segments.
 
 ```{r join crashes to centerlines, message=FALSE, warning=FALSE}
 #replace 0s in lat long columns with NA so we can omit
@@ -1267,6 +1277,8 @@ EPCenterline_new <-
 EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len))
 ```
 
+The distribution of crash data is also left-skewed, with a range of 0 to156 for the crash numbers and 0 to 881 crashes per 100 meters.
+
 ```{r road centerlines by crash count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
 ggplot(EPCenterline_new, aes(x=crash_count)) + 
@@ -1303,6 +1315,10 @@ ggplot(EPCenterline_new, aes(x=crash_len)) +
 
 ### 4.4.4 VMT Data
 
+Vehicle Miles Traveled (VMT) data is an important feature measuring the local vehicle usage. We get VMT data of each census block group from our client and calculate VMT per capita for each census tract as our model feature. VMT per capita reveals the local reliability on motor vehicles.
+
+The map below shows the distribution of VMT per capita. The nearer the census tract to downtown El Paso is, the lower the VMT per capita value is.
+
 ```{r VMT data, message=FALSE, warning=FALSE}
 census_geom <-
   EP_econ %>%
@@ -1332,6 +1348,8 @@ ggplot() +
 
 
 ```
+
+We also merge the VMT layer to the EPCenterline data frame.
 
 ```{r merging VMT data into EPCenterline_new, message=FALSE, warning=FALSE}
 VMT_centerlines <- 
@@ -1367,6 +1385,8 @@ EPCenterline_new2 <- EPCenterline_new %>%
 ```
 
 ### 4.4.5 Census Data
+
+In this part, we apply left join function to merge census data processed before to our big data frame.
 
 ```{r merging census data into EPcenterline}
 EPCenterline_new3 <- 
