@@ -510,7 +510,7 @@ ggplot()+
   scale_fill_viridis(option='G', direction=-1)+
   labs(title="Median Household Income in 2019",
        fill="Dollars ($)",
-       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019\n\nNote: Gray tracts indicate no data") + mapTheme()
 ```
 
 Median rent can reflect the state of the community's infrastructure to some extent and pavement condition is an important part of the local infrastructure. Thus, we assume that the median rent can somewhat reveal the local pavement conditions and serve as a reference for our decision making process.
@@ -522,7 +522,7 @@ ggplot()+
   scale_fill_viridis(option='G', direction= -1)+
   labs(title="Median Rent in 2019",
        fill="Dollars ($)",
-       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019n\nNote: Gray tracts indicate no data") + mapTheme()
 ```
 
 The percentage of local population who takes public transit to work has a lower level of usage on the pavements nearby. By looking at this feature, we can get a basic sense of the local public transportation utilization.
@@ -533,7 +533,27 @@ ggplot()+
   geom_sf(data=EP_econ, aes(fill=pct_transport_to_work), color="grey")+
   scale_fill_viridis(option='G', direction=-1)+
   labs(title="Percent Population with Transportation to Work in 2019",
+       fill="% Transport to Work",
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
+
+## 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
+At this point we also import the hydrology features from the US Census.
+
+```{r import hydrology from census message=FALSE, warning=FALSE}
+hydrology <- area_water('TX', county = 141) %>%
+  st_as_sf()%>%
+  st_transform('ESRI:102339')
+
+EPhydrology <- st_intersection(El_Paso_city, hydrology)
+```
+
+```{r visualize hydrology, message=FALSE, warning=FALSE}
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EPhydrology, color = 'blue', alpha = 0.5, show.legend = T)+ 
+  labs(title="Hydrology Across the City",
+       subtitle="El Paso, TX", caption="Source: US Census - TIGER/Line Shapefiles") + mapTheme()
 ```
 
 ## 4.3 Data Wrangling and Feature Engineering
@@ -542,9 +562,9 @@ ggplot()+
 
 #### Centerline and PCI exploration
 
-In this part, we start diving deeper into the existing datasets. To begin with, we apply data cleaning and wrangling on EPCenterline data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
+In this part, we start diving deeper into the existing datasets. To begin with, we apply data cleaning and wrangling on `EPCenterline` data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
 
-Then we remove some duplicated "LOCAL" classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories, LOCAL, MINOR, MAJOR, and COLLECTOR, and most of the existing pavement segments belong to LOCAL category.
+Then we remove some duplicated "LOCAL" classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories - LOCAL, MINOR, MAJOR, and COLLECTOR - and most of the existing pavement segments belong to LOCAL category.
 
 ```{r EP centerlines, message=FALSE, warning=FALSE}
 # delete duplicated "LOCAL" class
@@ -579,11 +599,13 @@ ggplot() +
 ggplot(EPCenterline, aes(y=CLASS)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Pavement Centerline Counts by Class",
+       x="Count",
+       y="Class",
        subtitle = "El Paso, TX") + plotTheme()
 
 ```
 
-We prepare centerline data with PCI values from 2018 and the latest resurfacing year by joining EPCenterline to centerline_with_age. We add a column of index for each pavement segment at this stage for any future joins and spatial joins. Since we select pavement segments as one of our spatial units, we calculate the length of each segment as a feature for future application.
+We prepare road centerline data with PCI values from 2018 and the latest resurfacing year by joining `EPCenterline` to `centerline_with_age`. We add a column of index for each pavement segment at this stage for any future joins and spatial joins. Since we select pavement segments as one of our spatial units, we calculate the length of each segment as a feature for future application.
 
 ```{r prepare centerline data with PCI values from 2018, message=FALSE, warning=FALSE}
 #join with centerline with age so we can include PCI info
@@ -605,17 +627,21 @@ EPCenterline_with_PCI <-
   mutate(pave_length = st_length(geometry))
 ```
 
-Here we focus on fundamental visualizations on the features of EPCenterline_with_PCI. As is shown in the plots below, LOCAL and COLLECTOR segments have higher average PCI values, while segments in MAJOR class tend to have more problems in pavement condition. When it comes to different planning areas, segments in Northwest El Paso and the Art Craft region have better pavement conditions, while the central region performs poorly.
+Here we focus on fundamental visualizations on the features of `EPCenterline_with_PCI`. As is shown in the plots below, LOCAL and COLLECTOR segments have higher average PCI values, while segments in MAJOR class tend to have more problems in pavement condition. When it comes to different planning areas, segments in Northwest El Paso and the Art Craft region have better pavement conditions, while the central region performs poorly.
 
 ```{r explore centerline data with PCI values from 2018 with visuals, message=FALSE, warning=FALSE}
 ggplot(EPCenterline_with_PCI, aes(y=CLASS)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
-  labs(title = "Pavement Centerlines by Class",
+  labs(title = "Road Centerlines by Class",
+       y="Class",
+       x="Count",
        subtitle = "El Paso, TX") + plotTheme()
 
 ggplot(EPCenterline_with_PCI, aes(y=STATUS)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
-  labs(title = "Pavement Centerlines by Status",
+  labs(title = "Road Centerlines by Status",
+       y="Pavement Status",
+       x="Count",
        subtitle = "El Paso, TX") + plotTheme()
 
 class_PCI <-
@@ -629,6 +655,8 @@ class_PCI <-
 ggplot(class_PCI, aes(x=PCI, y=CLASS)) + 
   geom_bar(stat = "identity", color="black", fill = "#08519c") +
   labs(title = "Average PCI Value by Class",
+       x="PCI",
+       y="Class",
        subtitle = "El Paso, TX") + plotTheme()
 
 plan_area_PCI <-
@@ -643,6 +671,8 @@ plan_area_PCI <-
 ggplot(plan_area_PCI, aes(x=PCI, y=PLANAREA)) + 
   geom_bar(stat = "identity", color="black", fill = "#08519c") +
   labs(title = "Average PCI Value by Planning Area",
+       x="PCI",
+       y="Planning Area",
        subtitle = "El Paso, TX") + plotTheme()
 ```
 
@@ -650,8 +680,9 @@ ggplot(plan_area_PCI, aes(x=PCI, y=PLANAREA)) +
 ggplot() +
   geom_sf(data = El_Paso_city, color="grey") +
   geom_sf(data = EPCenterline_with_PCI %>%
-            subset(MUNR == 'CITY OF EL PASO'), colour="#08519c") +
-  labs(title = "Centerlines within CITY OF EL PASO",
+            subset(MUNR == 'CITY OF EL PASO'), colour="#08519c", alpha=0.8) +
+  labs(title = "All Road Centerlines within CITY OF EL PASO",
+       fill="PCI",
        subtitle = "El Paso, TX") + mapTheme()
 ```
 
@@ -670,7 +701,9 @@ ggplot() +
 # unique(center_line$PCI_2018)
 ggplot(EPCenterline_with_PCI, aes(y=PCI_2018), color="grey") +
   geom_bar(width=0.5, color="transparent", fill = "#08519c") +
-  labs(title = "PCI Distribution",
+  labs(title = "PCI 2018 Distribution",
+       x="Count",
+       y="PCI",
        subtitle = "El Paso, TX") + plotTheme()
 ```
 
@@ -692,8 +725,10 @@ EPCenterline_with_PCI <- EPCenterline_with_PCI %>%
   dplyr::filter(EPCenterline_with_PCI$PCI_2018 > 0)
 
 ggplot(EPCenterline_with_PCI, aes(y=PCI_2018)) +
-  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
-  labs(title = "PCI Distribution (Negatives excluded)",
+  geom_bar(width=0.5, fill = "#08519c") +
+  labs(title = "PCI Distribution (Negatives Excluded)",
+       x="PCI",
+       y="Count",
        subtitle = "El Paso, TX") + plotTheme()
 
 # Remove unused columns
@@ -709,19 +744,19 @@ EPCenterline_with_PCI <-
 ```
 
 ```{r centerline with pci no negatives, message=FALSE, warning=FALSE}
-
 ggplot() +
   geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
   geom_sf(data = EPCenterline_with_PCI, aes(color = PCI_2018)) +
   scale_color_viridis(option='G', direction=-1)+
-  labs(title = "Centerlines with PCI Value in 2018",
+  labs(title = "Road Centerlines with PCI Value in 2018",
+       caption= "Note: Centerlines with negatives now excluded from this dataset",
        color="PCI",
        subtitle = "El Paso, TX") + mapTheme()
 ```
 
 #### Waze jam data exploration
 
-To get the X and Y coordinates for waze jam data, we apply some string extraction on the raw waze data and build up a spatial data frame.
+To get the X and Y coordinates for waze jam data, we apply some string extraction on the raw `waze_data` dataset and build up a spatial data frame.
 
 ```{r process the waze data 1, message=FALSE, warning=FALSE}
 x_fin <- data.frame()
@@ -747,7 +782,7 @@ waze_data$x_coor <- x_fin$x_coor
 waze_data$y_coor <- y_fin$y_coor
 ```
 
-As is shown in the histogram below, most of the traffic jams collected in waze dataset are heavy and moderate traffic jams, with a few NAs and very few light traffic. This is probably because people do not tend to report light traffic to waze database. The map of waze data points reveals that most of the congestions occur along the main roads in the city. We also do research on the NAs of waze data, and according to our client, that's probably other categories of waze data which are assigned to the NA group in our project.
+As is shown in the histogram below, most of the traffic jams collected in waze dataset are heavy and moderate traffic jams, with a few NAs and very few categorized as light traffic. This is probably because people do not tend to report light traffic to waze database. The map of waze data points reveals that most of the congestion occurs along the main roads in the city. We also do research on the NAs of waze data, and according to our client, that's probably other categories of waze data which are assigned to the NA group in our project.
 
 ```{r process waze jam data 2, message=FALSE, warning=FALSE}
 waze_sf <-
@@ -764,6 +799,8 @@ ggplot() +
 ggplot(waze_sf, aes(y=Subtype)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
   labs(title = "Waze Jams Count by Subtype",
+       x="Count",
+       y="Jam Subtype",
        subtitle = "El Paso, TX") + plotTheme()
 ```
 
@@ -774,6 +811,14 @@ ggplot() +
             subset(is.na(Subtype)), color = "#e76420", size=0.5, show.legend = "point") +
   labs(title = "Waze Jam Data Points with NA Subtype",
        subtitle = "El Paso, TX") + mapTheme()
+```
+
+
+For our feature engineering, we remove the NA subtype from the waze jams data since we are interested in the jam traffic report subtypes only.
+```{r remove subtype NA from jams data, message=FALSE, warning=FALSE}
+# we remove the NA subtype from the waze_sf
+waze_sf <- waze_sf %>%
+  dplyr::filter(Subtype != "NA")
 ```
 
 #### Potholes data exploration
@@ -802,14 +847,13 @@ potholes_sf <-
 
 potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 
-#NEED TO ALSO CLIP IT WITHIN EL PASO CITY
-
+# Clip to el paso city
  potholes_sf <- potholes_sf %>%
   st_intersection(El_Paso_city, potholes_sf)
 
 ```
 
-```{r grouping pot holes data by year 2, message=FALSE, warning=FALSE}
+```{r grouping pot holes data by year sets, message=FALSE, warning=FALSE}
 # new sf with last five years of points data only for easier legibility on maps
 potholes_sf_2016to2018 <- potholes_sf %>% subset(YEAR > 2015 & YEAR < 2019)
 potholes_sf_2019to2021 <- potholes_sf %>% subset(YEAR > 2018)
@@ -851,7 +895,7 @@ ggplot(potholes_sf, aes(y=YEAR)) +
 
 ```
 
-```{r animated map}
+```{r animated map, message=FALSE, warning=FALSE}
 library(gganimate)
 library(gifski)
 library(transformr)
@@ -861,23 +905,26 @@ potholes_sf2 <- potholes_sf %>% mutate(
 
 potholes_animation <-
   ggplot() +
+  geom_sf(data = El_Paso_city, fill="grey") +
     geom_sf(data = potholes_sf2, aes(color = YEAR)) +
     scale_color_viridis(option='G') +
     labs(title = "Potholes",
          subtitle = "Reports of Repairment by Year") + mapTheme() +
    transition_time(YEAR)
 
-gganimate::animate(potholes_animation, duration=10, renderer = gifski_renderer())
+gganimate::animate(potholes_animation, duration=20, renderer = gifski_renderer())
 ```
 
 ### 4.3.2 Visualzations
 
 #### Road data Visualization
 
-```{r tl_roads_data}
+```{r tl_roads_data, message=FALSE, warning=FALSE}
 ggplot(tl_roads, aes(y=RTTYP)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
-  labs(title = "Roads by RouteType (Census Tigerlines)",
+  labs(title = "Roads by Route Type (Census TIGER/Lines)",
+       x="Count",
+       y="Route Type",
        subtitle = "El Paso,TX") +
   plotTheme()
 ```
@@ -889,13 +936,12 @@ ggplot() +
     geom_sf(data = El_Paso_city, color = "grey") +
     geom_sf(data = CIP_layer, aes(color = PCI)) +
    scale_color_viridis(option='G', direction=-1)+
-  labs(title = "Capital Improvement Program (CIP) related Centerlines with PCIs",
+  labs(title = "Capital Improvement Program (CIP)-related\nCenterlines with PCIs",
        subtitle = "El Paso, TX") + mapTheme()
-
 
 ```
 
-#### El Paso pass visualization
+#### El Paso "pass" visualization
 
 ```{r elpaso_pass, message=FALSE, warning=FALSE}
 # glimpse(elpaso_pass)
@@ -928,7 +974,7 @@ ggplot() +
 
 ### 4.3.3 Land Cover Exploration
 
-Lots of raster data operations!
+Lots of raster data operations! Jenna to fill in 2/21.
 
 ```{r read in el paso city land cover raster, message=FALSE, warning=FALSE}
 # plot to see the land cover data
@@ -1095,6 +1141,7 @@ ggplot() +
   scale_fill_viridis_d(option="mako", direction=-1) +
                      labs(title = "Land Use by Census Tract",
        fill= "Land Use Type \n(Majority)",
+        caption="Source: City of El Paso, TX",
        subtitle = "El Paso, TX") +
   mapTheme()
 
@@ -1103,7 +1150,8 @@ ggplot(land_use_majority_sf, aes(y=land_use_type)) +
   labs(title = "Land Use by Census Tract",
        y="Land Use Type",
        x="Count of Tracts",
-       subtitle = "El Paso,TX") +
+       subtitle = "El Paso, TX",
+       caption="Source: City of El Paso, TX") +
   plotTheme()
 
 ```
@@ -1184,14 +1232,14 @@ Here we make a histogram of the distribution of pothole numbers and pothole numb
 ggplot(EPCenterline_new, aes(x=potholes_count)) + 
   geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + scale_x_continuous(limits = c(1, 150)) +
   labs(title = "Distribution of Potholes Numbers (0 Excluded)",
-       subtitle = "El Paso,TX") +
+       subtitle = "El Paso, TX") +
   plotTheme()
 
 # including segments with 0 potholes
 ggplot(EPCenterline_new, aes(x=potholes_count)) + 
   geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
   labs(title = "Distribution of Potholes Numbers",
-       subtitle = "El Paso,TX") +
+       subtitle = "El Paso, TX") +
   plotTheme()
 
 ```
@@ -1232,7 +1280,6 @@ waze_centerlines_clean <- waze_centerlines %>%
 
 ```{r waze jams per streetsegment and merging back with centerline data}
 # count jams per street segment
-# JENNA HAS A Question - DID WE REMOVE THE NAs from this count?
 waze_groupings <- waze_centerlines_clean %>% 
   group_by(index) %>%
   summarize(waze_count=n())
@@ -1504,6 +1551,15 @@ EPCenterline_new4 <- EPCenterline_new3 %>%
   rename(PCI_2018=PCI_2018.x)
 ```
 
+
+### 4.4.8 Hydrology Intersections
+
+At this point we also create a new feature for the number of times a road centerline intersects a hydrology feature across El Paso. This new feature is joined to the main dataset.
+
+```{r hydrology intersections, message=FALSE, warning=FALSE}
+EPCenterline_new4 <- EPCenterline_new4 %>% mutate(n_hydro_int = lengths(st_intersects(EPCenterline_new4, EPhydrology)))
+```
+
 ## 4.5 Correlation Exploration
 
 ### 4.5.1 Correlation Matrix for Numerical Variables
@@ -1520,7 +1576,7 @@ numVars <-
                 VMT_pop, 
                 #total_pop.y, 
                 #med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-                Res_Year,potholes_len, waze_len, crash_len) %>%
+                Res_Year,potholes_len, waze_len, crash_len, n_hydro_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1529,7 +1585,7 @@ numVars_withCensusVars <-
   dplyr::select(#potholes_count, waze_count, crash_count, 
                 VMT_pop,
                 med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-                Res_Year,potholes_len, waze_len, crash_len) %>%
+                Res_Year,potholes_len, waze_len, crash_len, n_hydro_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1567,6 +1623,7 @@ ggcorrplot(
 #   insig = "blank") +  
 #   labs(title = "Correlation Matrix for Numeric Variables") 
 ```
+
 
 ### 4.5.2 Categorical Correlations
 
