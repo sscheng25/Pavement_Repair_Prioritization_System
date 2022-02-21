@@ -1485,6 +1485,10 @@ EPCenterline_new4 <- EPCenterline_new3 %>%
 
 ### 4.5.1 Correlation Matrix for Numerical Variables
 
+Correlation matrix can help us visualize the correlations across numeric variables. In the figure below, the darker the shade of blue or orange is, the stronger the correlation is between each pair of two features.
+
+We can tell from the correlation matrix that there is no severe multi-collinearity among our numeric variables, if we do not include the variables from census data (which will probably not included in the model later). If we take the census variables into consideration, there is collinearity between the local median household income and median house rent feature.
+
 ```{r correlation Matrix}
 numVars <-
   EPCenterline_new4 %>%
@@ -1543,7 +1547,11 @@ ggcorrplot(
 
 ### 4.5.2 Categorical Correlations
 
+We also examine the correlations of PCI values and some categorical variables.
+
 #### RouteType and PCI
+
+We can tell from the barplot below that there is a slight difference on average PCI values between different Tiger/Line route types. Route type “O” has the highest average PCI value while “U” has the lowest average PCI.
 
 ```{r routetype pci correlation}
 tl_roads_PCI <- st_join(tl_roads, EPCenterline_new4, join=st_nearest_feature)
@@ -1560,6 +1568,8 @@ ggplot(aes(RTTYP, PCI_2018)) +
 
 #### Road Class and PCI
 
+When it comes to the road class of pavement segments in the EPCenterline dataset, there is no obvious difference between different road classes. Thus, road class might not be a useful variable in our model.
+
 ```{r class pci correlation}
 class_PCI<- EPCenterline_new4[c('index','CLASS','PCI_2018')]
 
@@ -1574,6 +1584,8 @@ ggplot(aes(CLASS, PCI_2018)) +
 
 #### Roadbed Base Material and PCI
 
+For the roadbed base material feature come from TXDOT roadbed data layer, we can tell that pavements with no base layer have the highest average PCI and those with asphalt stabilized base and stabilized open-graded permeable pavement have lower PCI values.
+
 ```{r roadbed base pci correlation, message=FALSE, warning=FALSE}
 roadbed_base_PCI %>%
 ggplot(aes(BASE_TYPE_, PCI_2018)) +
@@ -1587,6 +1599,8 @@ ggplot(aes(BASE_TYPE_, PCI_2018)) +
 ```
 
 #### Roadbed Surface Material and PCI
+
+For the roadbed surface material feature, pavement segments with joined reinforced concrete surface have the highest average PCI, while those with continuously reinforced concrete surface, medium thickness asphaltic concrete surface have lower average PCI values.
 
 ```{r roadbed surface pci correlation}
 roadbed_surface_PCI %>%
@@ -1603,6 +1617,8 @@ ggplot(aes(SRFC_TYPE, PCI_2018)) +
 
 #### Paved Status and PCI
 
+We examine the difference in average PCI value between paved and unpaved road segments, and the paved ones have higher average PCI values. However, since there is so few unpaved segments in our study area, this feature might not be useful in the modelling part.
+
 ```{r paved status pci correlation, warning=FALSE}
 paved_PCI<- EPCenterline_new4[c('index','STATUS','PCI_2018')]
 
@@ -1616,6 +1632,8 @@ ggplot(aes(STATUS, PCI_2018)) +
 ```
 
 #### Land Use and PCI
+
+Looking into the relationship between land use types and PCI value, we find that pavement segments near open space, transportation, and other land use types have higher PCIs, with an average over 75. Meanwhile, segments near multi-family houses, non-retail attractions have lower average PCIs.
 
 ```{r land use pci correlation, message=FALSE, warning=FALSE}
 land_use_with_PCI<- EPCenterline_new4[c('index','land_use_type','PCI_2018')]%>%
