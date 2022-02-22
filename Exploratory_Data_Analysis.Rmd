@@ -1621,23 +1621,31 @@ Correlation matrix can help us visualize the correlations across numeric variabl
 We can tell from the correlation matrix that there is no severe multi-collinearity among our numeric variables, if we do not include the variables from census data (which will probably not included in the model later). If we take the census variables into consideration, there is collinearity between the local median household income and median house rent feature.
 
 ```{r correlation Matrix, message=TRUE, warning=TRUE}
-numVars <-
+# add a new column of feature: road age
+EPCenterline_new5 <-
   EPCenterline_new4 %>%
+  mutate(max_year = pmax(Res_Year, Max_YEAR_F)) %>%
+  mutate(road_age = 2022 - max_year) %>%
+  subset(road_age < 2000)
+
+
+numVars <-
+  EPCenterline_new5 %>%
   dplyr::select(#potholes_count, waze_count, crash_count, 
-                #commenting out census variables while census API is down
-                VMT_pop, 
-                #total_pop.y, 
-                #med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-                Res_Year,potholes_len, waze_len, crash_len, n_hydro_int) %>%
+    #commenting out census variables while census API is down
+    VMT_pop, 
+    #total_pop.y, 
+    #med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+    road_age,potholes_len, waze_len, crash_len, n_hydro_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
 numVars_withCensusVars <-
-  EPCenterline_new4 %>%
+  EPCenterline_new5 %>%
   dplyr::select(#potholes_count, waze_count, crash_count, 
-                VMT_pop,
-                med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-                Res_Year,potholes_len, waze_len, crash_len, n_hydro_int) %>%
+    VMT_pop,
+    med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
+    road_age,potholes_len, waze_len, crash_len, n_hydro_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1662,7 +1670,7 @@ ggcorrplot(
   lab = TRUE, 
   insig = "blank") +  
   labs(title = "Correlation Matrix for Numeric Variables",
-  subtitle="Including Census Variables") +
+       subtitle="Including Census Variables") +
   #theme(plot.title = element_text(hjust = 0.5)) +
   plotTheme()
 
