@@ -108,7 +108,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
- source("Jenna.R")
+# source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
@@ -130,7 +130,9 @@ There currently is not an established prioritization system when it comes to whi
 
 But PCI also does not tell the whole story, and the client has expressed interest in exploring other factors that may drive a new prioritization system.
 
-This project is two-pronged: - First, we have the predictive model. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
+This project is two-pronged: 
+
+- First, we have the predictive model. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
 
 -   The second part of our project is the prioritization system, which will take the form of a we application. We will incorporate PCI (our modeled score or more likely the PCI used by the city) as just one piece of a resource application and prioritization system. We will be exploring factors to drive the new system that include both built and social environmental variables, thus bringing a lens of equity into the project.
 
@@ -150,18 +152,19 @@ To better inform our model, we want to understand the different parts of a road 
 
 To begin with, we import various data layers from local sources, and the datasets include,
 
--   CIP_layer: Centerlines included in the Capital Improvement Program
--   centerline_with_age: Centerlines in El Paso with the year of resurfacing and PCI values
--   EPCenterline: Centerlines in El Paso with properties like CLASS
--   zoning: El Paso city zoning
--   potholes: Potholes data in El Paso
--   waze_data: Waze traffic jam data in El Paso
--   VMT: Vehicle miles traveled per census blockgroup in El Paso
--   crash18: Crash data in El Paso in 2018
--   roadbed_base: Roadbed base properties of street segments
--   roadbed_surface: Roadbed surface properties of street segments
--   tl_roads: TIGER/Line shapefile with road properties in El Paso
--   EPcity_landcover: Landcover raster data of El Paso
+-   **CIP_layer**: Centerlines included in the Capital Improvement Program
+-   **centerline_with_age**: Centerlines in El Paso with the year of resurfacing and PCI values
+-   **EPCenterline**: Centerlines in El Paso with properties like CLASS
+-   **zoning**: El Paso city zoning
+-   **potholes**: Potholes data in El Paso
+-   **waze_data**: Waze traffic jam data in El Paso
+-   **VMT**: Vehicle miles traveled per census blockgroup in El Paso
+-   **crash18**: Crash data in El Paso in 2018
+-   **roadbed_base**: Roadbed base properties of street segments
+-   **roadbed_surface**: Roadbed surface properties of street segments
+-   **tl_roads**: TIGER/Line shapefile with road properties in El Paso
+-   **EPcity_landcover**: Landcover raster data of El Paso
+-   **floodzones**: Flood zone data of El Paso
 
 These datasets are the basis for the future data wrangling, feature engineering, and exploratory analysis process.
 
@@ -234,7 +237,7 @@ El_Paso_city <-
 
 ### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
-To get more sense about our study area, we introduce various kinds of census data from ACS 2019 5 year dataset. First, we take a look at the demographics, including race, ethnicity, and age groups.
+To get a better sense of the population that the roads are servicing, we take a look at the residents’ race, ethnicity, and age group through the ACS 5-year dataset.
 
 ```{r census_demographics, message=FALSE, warning=FALSE}
 # census data
@@ -391,7 +394,7 @@ pop_pyramid <-
   transform(value = as.numeric(value)) %>%
   group_by(variable, Sex) %>%
   summarise(value = sum(value))
-pop_pyramid$variable[pop_pyramid$variable == "Under 5 years"] <- "05 years and less"
+pop_pyramid$variable[pop_pyramid$variable == "Under 5 years"] <- "005 years and less"
 pop_pyramid$variable[pop_pyramid$variable == "5 to 9 years"] <- "05 to 9 years"
 pop_pyramid$variable[pop_pyramid$variable == "15 to 17 years" | pop_pyramid$variable == "18 and 19 years"] <- "15 to 19 years"
 pop_pyramid$variable[pop_pyramid$variable == "20 years" | pop_pyramid$variable == "21 years" | pop_pyramid$variable == "22 to 24 years"] <- "20 to 24 years"
@@ -401,7 +404,7 @@ pop_pyramid$variable[pop_pyramid$variable == "65 and 66 years" | pop_pyramid$var
 
 ```
 
-Taking a look at the population pyramid, we can tell the age structure of El Paso city tend to be young, and the working population accounts for a large proportion of the total population, which means there is a high everyday commute demand in our study area.
+Taking a look at the population pyramid, we can tell the age structure of El Paso city tend to be young, and the working age population accounts for a large proportion of the total population, which means there is a high everyday commute demand in our study area.
 
 ```{r plot the poplation pyramid, message=FALSE, warning=FALSE}
 ggplot(pop_pyramid, aes(x = variable, fill = Sex,
@@ -540,7 +543,7 @@ ggplot()+
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
 ```
 
-## 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
+### 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
 At this point we also import the hydrology features from the US Census. We can see from the map below that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
 
 ```{r import hydrology from census message=FALSE, warning=FALSE}
@@ -558,7 +561,7 @@ ggplot()+
   labs(title="Hydrology Across the City",
        subtitle="El Paso, TX", caption="Source: US Census - TIGER/Line Shapefiles") + mapTheme()
 ```
-## 4.2.3 El Paso FEMA Flood Zones
+### 4.2.4 El Paso FEMA Flood Zones
 We also investigate the FEMA-designated flood zones across the city.
 ```{r clip flood zones to city, message=FALSE, warning=FALSE}
 # clip flood zones to city bounds
@@ -589,7 +592,7 @@ ggplot()+
 
 #### Centerline and PCI exploration
 
-In this part, we start diving deeper into the existing datasets. To begin with, we apply data cleaning and wrangling on `EPCenterline` data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
+In this part, we start diving deeper into the existing dataset. To begin with, we apply data cleaning and wrangling on `EPCenterline` data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
 
 Then we remove some duplicated "LOCAL" classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories - LOCAL, MINOR, MAJOR, and COLLECTOR - and most of the existing pavement segments belong to LOCAL category.
 
@@ -783,7 +786,7 @@ ggplot() +
 
 #### Waze jam data exploration
 
-To get the X and Y coordinates for waze jam data, we apply some string extraction on the raw `waze_data` dataset and build up a spatial data frame.
+To get the X and Y coordinates for waze traffic jam data, we apply some string extraction on the raw `waze_data` dataset and build up a spatial data frame.
 
 ```{r process the waze data 1, message=FALSE, warning=FALSE}
 x_fin <- data.frame()
@@ -875,7 +878,7 @@ potholes_sf <-
 potholes_sf$YEAR[potholes_sf$YEAR == 2106] <- 2016
 
 # Clip to el paso city
- potholes_sf <- potholes_sf %>%
+potholes_sf <- potholes_sf %>%
   st_intersection(El_Paso_city, potholes_sf)
 
 ```
@@ -946,6 +949,8 @@ gganimate::animate(potholes_animation, duration=20, renderer = gifski_renderer()
 
 #### Road data Visualization
 
+Here we examine the road data in El Paso city by route type.
+
 ```{r tl_roads_data, message=FALSE, warning=FALSE}
 ggplot(tl_roads, aes(y=RTTYP)) +
   geom_bar(width=0.5, color="black", fill = "#08519c") +
@@ -958,6 +963,8 @@ ggplot(tl_roads, aes(y=RTTYP)) +
 
 #### CIP related Centerlines Visualization
 
+Some of the pavement segments are related to the Capital Improvement Program (CIP) in El Paso, and we plot those segments below in the map.
+
 ```{r CIP_layer, message=FALSE, warning=FALSE}
 ggplot() +
     geom_sf(data = El_Paso_city, color = "grey") +
@@ -968,25 +975,26 @@ ggplot() +
 
 ```
 
-#### El Paso "pass" visualization
 
 ```{r elpaso_pass, message=FALSE, warning=FALSE}
 # glimpse(elpaso_pass)
 
-ggplot() +
-  geom_sf(data = elpaso_pass, color = "grey") +
-  labs(title = "El Paso Pass Data Layer",
-       subtitle = "El Paso, TX") +
-  mapTheme()
+#ggplot() +
+#  geom_sf(data = elpaso_pass, color = "grey") +
+#  labs(title = "El Paso Pass Data Layer",
+#       subtitle = "El Paso, TX") +
+#  mapTheme()
 
-ggplot(elpaso_pass, aes(y=pci_2018)) +
-  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
-  labs(title = "PCI distribution of El Paso Pass Data Layer",
-       subtitle = "El Paso, TX") +
-  plotTheme()
+#ggplot(elpaso_pass, aes(y=pci_2018)) +
+#  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
+#  labs(title = "PCI distribution of El Paso Pass Data Layer",
+#       subtitle = "El Paso, TX") +
+#  plotTheme()
 ```
 
 #### Zoning data Visualization
+
+This part visualizes the planning zones of El Paso city.
 
 ```{r zoning map, message=FALSE, warning=FALSE}
 
@@ -1327,7 +1335,7 @@ EPCenterline_new$waze_len <- as.numeric(as.character(EPCenterline_new$waze_len))
 
 ```
 
-### 4.4.3 Crash Data (2018 only)
+### 4.4.3 Crash Data
 
 In this part, we start processing crash data in 2018. Geometry is assigned to the data frame and the data points are spatially joined to the buffered pavement segments.
 
@@ -1352,7 +1360,7 @@ crash_centerlines_clean <- crash_centerlines %>%
   dplyr::select(Crash_ID, index) %>% st_drop_geometry()
 ```
 
-```{r}
+```{r FILL THE CHUNK INFO HERE}
 
 
 ```
@@ -1379,10 +1387,11 @@ EPCenterline_new <-
 EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len))
 ```
 
-```{r}
+```{r map crashes by length, message=TRUE, warning=TRUE}
 # map crashes by length
 crash_breaks = c(1, 5, 10, 25, 100, 900)
 ggplot() +
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
   geom_sf(data = EPCenterline_new, aes(color = crash_len)) +
   scale_color_viridis(direction=-1, option='G', breaks=crash_breaks, limits=c(1,100))+
   labs(title = "Crashes in 2018",
@@ -1611,7 +1620,7 @@ Correlation matrix can help us visualize the correlations across numeric variabl
 
 We can tell from the correlation matrix that there is no severe multi-collinearity among our numeric variables, if we do not include the variables from census data (which will probably not included in the model later). If we take the census variables into consideration, there is collinearity between the local median household income and median house rent feature.
 
-```{r correlation Matrix}
+```{r correlation Matrix, message=TRUE, warning=TRUE}
 numVars <-
   EPCenterline_new4 %>%
   dplyr::select(#potholes_count, waze_count, crash_count, 
