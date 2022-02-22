@@ -1,7 +1,7 @@
 ---
 title: "Exploratory Data Analysis - El Paso"
-author: "Sisun Cheng, Jenna Epstein, Kristin Chang"
-date: "2022/2/19"
+author: "Sisun Cheng, Kristin Chang,  Jenna Epstein"
+date: "2022/2/22"
 output:
   html_document:
     toc: yes
@@ -112,7 +112,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-# source("Jenna.R")
+ source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
@@ -146,9 +146,10 @@ This project is two-pronged:
 
 A Pavement Condition Index (PCI) measures the quality of a specific road segment. The Capital Improvements Department in El Paso hired a private contractor in 2018 to conduct a digital image scan of the city's roads to evaluate them based on a wide range of conditions. While their exact metrics are proprietary, generally, PCIs are based off of factors such as presence of potholes, bumps, or cracks. The index ranges from a qualitative scale of Failing to Good or quantitatively 0 to 100. We found this chart from an Army Corps of Engineers' study in which they show a significant drop in condition of a road after a certain amount of time. We hope to include the cost savings calculations from this study in the second part of our project, the decision-making tool. This would be a strong advocacy tool for improving a road as well as a strong planning tool by considering the road's lifetime. For now, this made us curious about the construction of roads and if there are any earlier stage indicators that could show signs of weakening conditions.
 
-## 3.2. Anatomy of a Road
+## 3.2. Road Anatomy
 
 To better inform our model, we want to understand the different parts of a road and what factors may lead to worsening conditions over time. We identified three main features to pay attention to: the earth foundation, the roadbed base, and the surface. The surface as an important feature is more obvious as potholes, bumps, and cracks are noticeable to the everyday road user. However, there are roads that have no base layer, weak materials, or are built in areas prone to flooding that can weaken the road's structure as it ages. These are all important aspects of a road's anatomy that we explored in the exploratory data analysis phase and their relationship to PCI.
+
 
 # 4. Exploratory Data Analysis
 
@@ -168,7 +169,7 @@ To begin with, we import various data layers from local sources, and the dataset
 -   **roadbed_surface**: Roadbed surface properties of street segments
 -   **tl_roads**: TIGER/Line shapefile with road properties in El Paso
 -   **EPcity_landcover**: Landcover raster data of El Paso
--   **floodzones**: Flood zone data of El Paso
+-   **floodzones**: FEMA flood zone designations data of El Paso
 
 These datasets are the basis for the future data wrangling, feature engineering, and exploratory analysis process.
 
@@ -313,7 +314,7 @@ EP_ethnicity_county <- EP_ethnicity_county  %>%
 EP_ethnicity <- st_intersection(EP_ethnicity_county, El_Paso_city)
 ```
 
-```{r census_demographics_age}
+```{r census_demographics_age, message=FALSE, warning=FALSE}
 #loading age data by tract - use E variables for estimate values
 ageVar <- ACSvar %>%
   filter(concept=="SEX BY AGE")
@@ -425,7 +426,6 @@ ggplot(pop_pyramid, aes(x = variable, fill = Sex,
 The diverse distribution of race and ethnicity can assist us in the future cross validation process and serve as a reference on equity control.
 
 ```{r census_demo_maps, message=FALSE, warning=FALSE}
-
 #plotting census demographics data
 #race map
 
@@ -448,7 +448,7 @@ do.call(grid.arrange,c(mapList, ncol = 4, top = "Race by Census Tract"))
 
 ```
 
-```{r census_demo_maps2}
+```{r census_demo_maps2, message=FALSE, warning=FALSE}
 #ethnicity map - Hispanic or Latino
 ggplot()+
   geom_sf(data=EP_ethnicity, aes(fill=pctHL), color="grey")+
@@ -464,7 +464,7 @@ ggplot()+
 
 We also get some socioeconomic factors from ACS datasets.
 
-```{r census data, Socioeconomics}
+```{r census data socioeconomics, message=FALSE, warning=FALSE}
 
 EP_econ_county <-
   get_acs(geography = "tract",
@@ -565,6 +565,7 @@ ggplot()+
   geom_sf(data = EPhydrology, color = 'blue', alpha = 0.5, show.legend = T)+ 
   labs(title="Hydrology Across the City",
        subtitle="El Paso, TX", caption="Source: US Census - TIGER/Line Shapefiles") + mapTheme()
+
 ```
 
 ### 4.2.4 El Paso FEMA Flood Zones
@@ -583,7 +584,9 @@ Azones <- c("A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11", 
 
 
 EPcity_floodzones$ZONE[EPcity_floodzones$ZONE %in% Azones] <- "AE, A1-30"
+
 ```
+
 
 ```{r visualize flood zones, message=FALSE, warning=FALSE}
 ggplot()+
@@ -591,6 +594,36 @@ ggplot()+
   geom_sf(data = EPcity_floodzones, aes(fill=ZONE), color="transparent")+
   #scale_fill_viridis_d(direction=-1, option='G')+
   labs(title="FEMA Flood Zones in El Paso",
+       fill= "Zone",
+       subtitle="El Paso, TX", caption="Source: City of El Paso; FEMA") + mapTheme()
+
+```
+
+We also grouped the flood zones by high, moderate, and lower risk to better understand where more vulnerable areas of the city are situated.
+
+```{r visualize flood zones by high med and low risk, message=FALSE, warning=FALSE}
+# list of Special Flood Hazard Area zones
+
+#FROM FEMA: SFHA are defined as the area that will be inundated by the flood event having a 1-percent chance of being equaled or exceeded in any given year. The 1-percent annual chance flood is also referred to as the base flood or 100-year flood. SFHAs are labeled as Zone A, Zone AO, Zone AH, Zones A1-A30, Zone AE, Zone A99, Zone AR, Zone AR/AE, Zone AR/AO, Zone AR/A1-A30, Zone AR/A, Zone V, Zone VE, and Zones V1-V30. Moderate flood hazard areas, labeled Zone B or Zone X (shaded) are also shown on the FIRM, and are the areas between the limits of the base flood and the 0.2-percent-annual-chance (or 500-year) flood. The areas of minimal flood hazard, which are the areas outside the SFHA and higher than the elevation of the 0.2-percent-annual-chance flood, are labeled Zone C or Zone X (unshaded).
+
+Higher_Risk <- c("AE, A1-30", "AH", "AO", "A")
+Moderate_Risk <- c("B", "X")
+Lower_Risk <- c("0.2 *")
+
+EPcity_floodzones <- EPcity_floodzones %>%
+  dplyr::mutate("Risk" = ZONE)
+
+EPcity_floodzones$Risk[EPcity_floodzones$Risk %in% Higher_Risk] <- "Higher_Risk"
+EPcity_floodzones$Risk[EPcity_floodzones$Risk %in% Moderate_Risk] <- "Moderate_Risk"
+EPcity_floodzones$Risk[EPcity_floodzones$Risk %in% Lower_Risk] <- "Lower_Risk"
+
+
+
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EPcity_floodzones, aes(fill=Risk), color="transparent")+
+  scale_fill_viridis_d(direction=1, option='D')+
+  labs(title="Flood Risk in El Paso",
        fill= "Zone",
        subtitle="El Paso, TX", caption="Source: City of El Paso; FEMA") + mapTheme()
 ```
@@ -897,6 +930,7 @@ potholes_sf <- potholes_sf %>%
 potholes_sf_2016to2018 <- potholes_sf %>% subset(YEAR > 2015 & YEAR < 2019)
 potholes_sf_2019to2021 <- potholes_sf %>% subset(YEAR > 2018)
 potholes_sf_2018 <- potholes_sf %>% subset(YEAR == 2018)
+
 ```
 
 ```{r 2018 streets and potholes map, message=FALSE, warning=FALSE}
@@ -946,9 +980,11 @@ potholes_animation <-
     scale_color_viridis(option='G') +
     labs(title = "Potholes",
          subtitle = "Reports of Repairment by Year") + mapTheme() +
-   transition_time(YEAR)
+   transition_states(YEAR)
+#ani.options(interval = 0.2)
 
-# gganimate::animate(potholes_animation, duration=20, renderer = gifski_renderer())
+
+gganimate::animate(potholes_animation, duration=1, renderer = gifski_renderer())
 ```
 
 ![](gif/potholes_map.gif "animated_potholes_map")
@@ -1016,11 +1052,11 @@ ggplot() +
 
 ### 4.3.3 Land Cover Exploration
 
-Lots of raster data operations! Jenna to fill in 2/21.
+Direct and surrounding land cover and land use types can influence road conditions. Most of the roads fall within heavily developed areas and are single family land use. These characteristics indicate that there could be high volume of traffic as people travel from residential to commercial areas, which ultimately increases the wear and tear of roads over time.
 
-```{r read in el paso city land cover raster, message=FALSE, warning=FALSE}
+```{r read in el paso city land cover raster, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # plot to see the land cover data
-plot(EPcity_landcover)
+#plot(EPcity_landcover)
 ```
 
 ```{r reproject raster, message=FALSE, warning=FALSE, results='hide'}
@@ -1156,6 +1192,8 @@ ggplot(data = EPcity_landcover_df) +
 ```
 
 ### 4.3.4 Land Use Exploration
+
+Again we can see that there is majority developed area across the city, with a focus particularly on single-family residential.
 
 ```{r land use visualization, message=FALSE, warning=FALSE}
 census_geom <-
@@ -1366,7 +1404,7 @@ crash_centerlines_clean <- crash_centerlines %>%
   dplyr::select(Crash_ID, index) %>% st_drop_geometry()
 ```
 
-```{r FILL THE CHUNK INFO HERE}
+```{r FILL THE CHUNK INFO HERE, message=FALSE, warning=FALSE}
 
 
 ```
@@ -1723,7 +1761,7 @@ We also examine the correlations of PCI values and some categorical variables.
 
 We can tell from the barplot below that there is a slight difference on average PCI values between different Tiger/Line route types. Route type "O" has the highest average PCI value while "U" has the lowest average PCI.
 
-```{r routetype pci correlation}
+```{r routetype pci correlation, message=TRUE, warning=FALSE}
 tl_roads_PCI <- st_join(tl_roads, EPCenterline_new4, join=st_nearest_feature)
 tl_roads_PCI <- tl_roads_PCI[c('index','RTTYP','PCI_2018')]
 
@@ -1740,7 +1778,7 @@ ggplot(aes(RTTYP, PCI_2018)) +
 
 When it comes to the road class of pavement segments in the EPCenterline dataset, there is no obvious difference between different road classes. Thus, road class might not be a useful variable in our model.
 
-```{r class pci correlation}
+```{r class pci correlation, message=FALSE, warning=FALSE}
 class_PCI<- EPCenterline_new4[c('index','CLASS','PCI_2018')]
 
 class_PCI %>%
@@ -1772,7 +1810,7 @@ ggplot(aes(BASE_TYPE_, PCI_2018)) +
 
 For the roadbed surface material feature, pavement segments with joined reinforced concrete surface have the highest average PCI, while those with continuously reinforced concrete surface, medium thickness asphaltic concrete surface have lower average PCI values.
 
-```{r roadbed surface pci correlation}
+```{r roadbed surface pci correlation, message=FALSE, warning=FALSE}
 roadbed_surface_PCI %>%
 ggplot(aes(SRFC_TYPE, PCI_2018)) +
     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
