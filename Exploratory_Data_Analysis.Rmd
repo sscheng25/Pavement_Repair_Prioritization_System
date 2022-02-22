@@ -134,9 +134,9 @@ There currently is not an established prioritization system when it comes to whi
 
 But PCI also does not tell the whole story, and the client has expressed interest in exploring other factors that may drive a new prioritization system.
 
-This project is two-pronged: 
+This project is two-pronged:
 
-- First, we have the predictive model. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
+-   First, we have the predictive model. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
 
 -   The second part of our project is the prioritization system, which will take the form of a we application. We will incorporate PCI (our modeled score or more likely the PCI used by the city) as just one piece of a resource application and prioritization system. We will be exploring factors to drive the new system that include both built and social environmental variables, thus bringing a lens of equity into the project.
 
@@ -241,7 +241,7 @@ El_Paso_city <-
 
 ### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
-To get a better sense of the population that the roads are servicing, we take a look at the residents’ race, ethnicity, and age group through the ACS 5-year dataset.
+To get a better sense of the population that the roads are servicing, we take a look at the residents' race, ethnicity, and age group through the ACS 5-year dataset.
 
 ```{r census_demographics, message=FALSE, warning=FALSE}
 # census data
@@ -548,6 +548,7 @@ ggplot()+
 ```
 
 ### 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
+
 At this point we also import the hydrology features from the US Census. We can see from the map below that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
 
 ```{r import hydrology from census, message=FALSE, warning=FALSE}
@@ -565,8 +566,11 @@ ggplot()+
   labs(title="Hydrology Across the City",
        subtitle="El Paso, TX", caption="Source: US Census - TIGER/Line Shapefiles") + mapTheme()
 ```
+
 ### 4.2.4 El Paso FEMA Flood Zones
+
 We also investigate the FEMA-designated flood zones across the city.
+
 ```{r clip flood zones to city, message=FALSE, warning=FALSE}
 # clip flood zones to city bounds
 EPcity_floodzones <- st_intersection(floodzones, El_Paso_city)
@@ -590,6 +594,7 @@ ggplot()+
        fill= "Zone",
        subtitle="El Paso, TX", caption="Source: City of El Paso; FEMA") + mapTheme()
 ```
+
 ## 4.3 Data Wrangling and Feature Engineering
 
 ### 4.3.1 Data Wrangling on Centerline-related datasets
@@ -847,8 +852,8 @@ ggplot() +
        subtitle = "El Paso, TX") + mapTheme()
 ```
 
-
 For our feature engineering, we remove the NA subtype from the waze jams data since we are interested in the jam traffic report subtypes only.
+
 ```{r remove subtype NA from jams data, message=FALSE, warning=FALSE}
 # we remove the NA subtype from the waze_sf
 waze_sf <- waze_sf %>%
@@ -946,6 +951,8 @@ potholes_animation <-
 # gganimate::animate(potholes_animation, duration=20, renderer = gifski_renderer())
 ```
 
+![](gif/potholes_map.gif "animated_potholes_map")
+
 ### 4.3.2 Visualzations
 
 #### Road data Visualization
@@ -975,7 +982,6 @@ ggplot() +
        subtitle = "El Paso, TX") + mapTheme()
 
 ```
-
 
 ```{r elpaso_pass, message=FALSE, warning=FALSE}
 # glimpse(elpaso_pass)
@@ -1603,7 +1609,6 @@ EPCenterline_new4 <- EPCenterline_new3 %>%
   rename(PCI_2018=PCI_2018.x)
 ```
 
-
 ### 4.4.8 Hydrology Intersections
 
 At this point we also create a new feature for the number of times a road centerline intersects a hydrology feature across El Paso. This new feature is joined to the main dataset.
@@ -1683,7 +1688,6 @@ ggcorrplot(
 #   insig = "blank") +  
 #   labs(title = "Correlation Matrix for Numeric Variables") 
 ```
-
 
 ### 4.5.2 Numeric Correlations with PCI
 
@@ -1817,8 +1821,3 @@ ggplot(aes(land_use_type, PCI_2018)) +
   scale_x_discrete(labels = wrap_format(12)) + 
    plotTheme()
 ```
-
-
-
-
-
