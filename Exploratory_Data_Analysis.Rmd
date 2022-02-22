@@ -48,7 +48,11 @@ library(rgdal)
 library(RColorBrewer) 
 library(rasterVis)    
 library(sp)
-
+library(ggpubr)
+library(leaflet)
+library(gganimate)
+library(gifski)
+library(transformr)
 
 palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
 palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
@@ -926,9 +930,6 @@ ggplot(potholes_sf, aes(y=YEAR)) +
 ```
 
 ```{r animated map, message=FALSE, warning=FALSE}
-library(gganimate)
-library(gifski)
-library(transformr)
 
 potholes_sf2 <- potholes_sf %>% mutate(
   YEAR = parse_number(YEAR))
@@ -1016,7 +1017,7 @@ Lots of raster data operations! Jenna to fill in 2/21.
 plot(EPcity_landcover)
 ```
 
-```{r reproject raster, message=FALSE, warning=FALSE}
+```{r reproject raster, message=FALSE, warning=FALSE, results='hide'}
 EPcity_landcover_reproject <- projectRaster(EPcity_landcover,
                                        crs = crs(El_Paso_city))
 ```
@@ -1130,7 +1131,6 @@ ggplot(data = EPcity_landcover_df) +
 ```
 
 ```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-library(leaflet)
 # JENNA'S ATTEMPT AT MAKING A LEAFLET INTERACTIVE MAP - HAVING TROUBLE GETTING THE CENTERLINES TO SHOW UP ALONG WITH THE RASTER
 # r <- EPcity_landcover_crop
 # pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFCC"), values(r),
@@ -1685,7 +1685,33 @@ ggcorrplot(
 ```
 
 
-### 4.5.2 Categorical Correlations with PCI
+### 4.5.2 Numeric Correlations with PCI
+
+After checking the collinearities, we need to examine the correlations of PCI values and numeric variables.
+
+Road age and pothole numbers have significant correlations with PCI values, and VMT per capita has a moderate correlation. However, crash numbers, traffic jam numbers, and hydro-characteristics seem to lack the significant correlation with PCI values.
+
+```{r Numeric Correlations with PCI, message=TRUE, warning=TRUE}
+numVars_PCI <-
+  EPCenterline_new5 %>%
+  dplyr::select(VMT_pop, PCI_2018,
+    road_age, potholes_len, waze_len, crash_len, n_hydro_int) %>%
+  st_drop_geometry() %>%
+  na.omit()
+
+numVars_PCI %>% 
+  gather(Variable, Value, -PCI_2018) %>% 
+  ggplot(aes(Value, PCI_2018)) +
+  geom_point(size = 0.5, color = "grey") + 
+  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
+     facet_wrap(~Variable, ncol = 3, scales = "free") +
+     labs(title = "Numeric Variables vs. PCI",
+          subtitle = "El Paso, TX") + 
+  stat_cor(aes(label = ..r.label..), label.x = 0) +
+  plotTheme()
+```
+
+### 4.5.3 Categorical Correlations with PCI
 
 We also examine the correlations of PCI values and some categorical variables.
 
@@ -1792,28 +1818,7 @@ ggplot(aes(land_use_type, PCI_2018)) +
    plotTheme()
 ```
 
-### 4.5.3 Numeric Correlations with PCI
 
-```{r Numeric Correlations with PCI, message=TRUE, warning=TRUE}
-numVars_PCI <-
-  EPCenterline_new5 %>%
-  dplyr::select(VMT_pop, PCI_2018,
-    road_age,potholes_len, waze_len, crash_len, n_hydro_int) %>%
-  st_drop_geometry() %>%
-  na.omit()
-
-library(ggpubr)
-numVars_PCI %>% 
-  gather(Variable, Value, -PCI_2018) %>% 
-  ggplot(aes(Value, PCI_2018)) +
-  geom_point(size = 0.5, color = "grey") + 
-  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
-     facet_wrap(~Variable, ncol = 3, scales = "free") +
-     labs(title = "Numeric Variables vs. PCI",
-          subtitle = "El Paso, TX") + 
-  stat_cor(aes(label = ..r.label..), label.x = 0) +
-  plotTheme()
-```
 
 
 
