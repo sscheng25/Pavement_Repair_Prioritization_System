@@ -112,7 +112,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
- source("Jenna.R")
+#source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
@@ -1616,6 +1616,7 @@ ggplot(paved_status, aes(y=STATUS)) +
 ```
 
 ### 4.4.7 Land Use Data
+At this point we merege the land use data with the centerline data so that each one is associated with the majority land type.
 
 ```{r land use join to road segments, message=FALSE, warning=FALSE}
 land_use_centerlines <- 
