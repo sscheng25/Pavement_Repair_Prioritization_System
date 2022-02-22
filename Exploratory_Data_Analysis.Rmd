@@ -546,7 +546,7 @@ ggplot()+
 ### 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
 At this point we also import the hydrology features from the US Census. We can see from the map below that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
 
-```{r import hydrology from census message=FALSE, warning=FALSE}
+```{r import hydrology from census, message=FALSE, warning=FALSE}
 hydrology <- area_water('TX', county = 141) %>%
   st_as_sf()%>%
   st_transform('ESRI:102339')
@@ -1807,7 +1807,7 @@ numVars_PCI %>%
   gather(Variable, Value, -PCI_2018) %>% 
   ggplot(aes(Value, PCI_2018)) +
   geom_point(size = 0.5, color = "grey") + 
-  geom_smooth(method = "lm", se=F, colour = "#08519c") +
+  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
      facet_wrap(~Variable, ncol = 3, scales = "free") +
      labs(title = "Numeric Variables vs. PCI",
           subtitle = "El Paso, TX") + 
