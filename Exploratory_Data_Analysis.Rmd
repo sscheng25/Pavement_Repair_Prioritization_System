@@ -942,7 +942,7 @@ potholes_animation <-
          subtitle = "Reports of Repairment by Year") + mapTheme() +
    transition_time(YEAR)
 
-gganimate::animate(potholes_animation, duration=20, renderer = gifski_renderer())
+# gganimate::animate(potholes_animation, duration=20, renderer = gifski_renderer())
 ```
 
 ### 4.3.2 Visualzations
@@ -1685,7 +1685,7 @@ ggcorrplot(
 ```
 
 
-### 4.5.2 Categorical Correlations
+### 4.5.2 Categorical Correlations with PCI
 
 We also examine the correlations of PCI values and some categorical variables.
 
@@ -1699,7 +1699,7 @@ tl_roads_PCI <- tl_roads_PCI[c('index','RTTYP','PCI_2018')]
 
 tl_roads_PCI %>%
 ggplot(aes(RTTYP, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
     labs(title = "Route Type vs. PCI",
          y="PCI Score in 2018",
          x="Route Type",
@@ -1715,7 +1715,7 @@ class_PCI<- EPCenterline_new4[c('index','CLASS','PCI_2018')]
 
 class_PCI %>%
 ggplot(aes(CLASS, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
     labs(title = "Road Class vs. PCI",
          y="PCI Score in 2018",
          x="Road Class",
@@ -1729,7 +1729,7 @@ For the roadbed base material feature come from TXDOT roadbed data layer, we can
 ```{r roadbed base pci correlation, message=FALSE, warning=FALSE}
 roadbed_base_PCI %>%
 ggplot(aes(BASE_TYPE_, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
     labs(title = "Roadbed Base Material vs. PCI",
          y="PCI Score in 2018",
          x="Roadbed Base Material",
@@ -1745,7 +1745,7 @@ For the roadbed surface material feature, pavement segments with joined reinforc
 ```{r roadbed surface pci correlation}
 roadbed_surface_PCI %>%
 ggplot(aes(SRFC_TYPE, PCI_2018)) +
-    geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+    geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
     labs(title = "Roadbed Surface Material vs. PCI",
          y="PCI Score in 2018",
          x="Roadbed Surface Material",
@@ -1764,7 +1764,7 @@ paved_PCI<- EPCenterline_new4[c('index','STATUS','PCI_2018')]
 
 paved_PCI %>%
 ggplot(aes(STATUS, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
     labs(title = "Paved Status vs. PCI",
          y="PCI Score in 2018",
          x="Paved Status",
@@ -1783,7 +1783,7 @@ land_use_with_PCI$land_use_type = stringr::str_replace_all(land_use_with_PCI$lan
 
 land_use_with_PCI %>%
 ggplot(aes(land_use_type, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
     labs(title = "Land Use vs. PCI",
          y="PCI Score in 2018",
          x="Land Use Type",
@@ -1791,3 +1791,29 @@ ggplot(aes(land_use_type, PCI_2018)) +
   scale_x_discrete(labels = wrap_format(12)) + 
    plotTheme()
 ```
+
+### 4.5.3 Numeric Correlations with PCI
+
+```{r Numeric Correlations with PCI, message=TRUE, warning=TRUE}
+numVars_PCI <-
+  EPCenterline_new5 %>%
+  dplyr::select(VMT_pop, PCI_2018,
+    road_age,potholes_len, waze_len, crash_len, n_hydro_int) %>%
+  st_drop_geometry() %>%
+  na.omit()
+
+library(ggpubr)
+numVars_PCI %>% 
+  gather(Variable, Value, -PCI_2018) %>% 
+  ggplot(aes(Value, PCI_2018)) +
+  geom_point(size = 0.5, color = "grey") + 
+  geom_smooth(method = "lm", se=F, colour = "#08519c") +
+     facet_wrap(~Variable, ncol = 3, scales = "free") +
+     labs(title = "Numeric Variables vs. PCI",
+          subtitle = "El Paso, TX") + 
+  stat_cor(aes(label = ..r.label..), label.x = 0) +
+  plotTheme()
+```
+
+
+
