@@ -852,6 +852,8 @@ x_fin$x_coor <- x_fin$X..106.598471.
 y_fin$y_coor <- y_fin$X.31.911973.
 waze_data$x_coor <- x_fin$x_coor
 waze_data$y_coor <- y_fin$y_coor
+
+# write.csv(waze_data,"C:\\Users\\CSS\\Desktop\\MUSA801\\Pavement_Repair_Prioritization_System\\Data\\cleaned_waze_data.csv", row.names = FALSE)
 ```
 
 As is shown in the histogram below, most of the traffic jams collected in waze dataset are heavy and moderate traffic jams, with a few NAs and very few categorized as light traffic. This is probably because people do not tend to report light traffic to waze database. The map of waze data points reveals that most of the congestion occurs along the main roads in the city. We also do research on the NAs of waze data, and according to our client, that's probably other categories of waze data which are assigned to the NA group in our project.
