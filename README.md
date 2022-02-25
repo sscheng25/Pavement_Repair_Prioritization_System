@@ -11,4 +11,7 @@ MUSA Practicum project for Pavement Repair Prioritization System in El Paso, TX.
  
 ## Project Management (Public-Facing)
 - [Gantt chart & calendar](https://coda.io/d/MUSA801-El-Paso-Group-Project-Management-Public-View_dMklASuZLoQ)
+
+## Deliverables
 - [First Presentation](https://docs.google.com/presentation/d/1JOGHycc9fFwSdGAu4EzRVXzFVSFH1RRHknPAUwKfPFk/edit#slide=id.g115e53c21e0_0_225)
+- [First Markdown - Exploratory_Data_Analysis(.html/.Rmd)](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Exploratory_Data_Analysis.html)
