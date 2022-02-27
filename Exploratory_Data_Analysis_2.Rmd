@@ -116,7 +116,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-#source("Kristin.R")
+source("Kristin.R")
 ```
 
 # 1. Project Introduction
@@ -1635,6 +1635,27 @@ At this point we also create a new feature for the number of times a road center
 EPCenterline_new4 <- EPCenterline_new4 %>% mutate(n_hydro_int = lengths(st_intersects(EPCenterline_new4, EPhydrology)))
 ```
 
+### 4.4.9 Road Connectivity
+
+```{r major intersections, message=FALSE, warning=FALSE}
+roads_by_class <- EPCenterline_new4%>%
+  dplyr::select('index','CLASS','geometry')
+
+major_roads <- roads_by_class %>%
+  filter(CLASS=='MAJOR')
+
+non_major_roads <- roads_by_class %>%
+  filter(CLASS!='MAJOR')
+
+major_intersections <- st_intersection(non_major_roads, major_roads)
+
+#return index of nearest feat in major_intersections to each feature in roads_by_class
+nearest_major_int <- st_nearest_feature(roads_by_class, major_intersections) 
+
+EPCenterline_new4 <- EPCenterline_new4 %>%
+  mutate(dist_major_int = st_distance(roads_by_class, major_intersections[nearest_major_int,], by_element=TRUE))
+```
+
 ## 4.5 Correlation Exploration
 
 ### 4.5.1 Correlation Matrix for Numerical Variables
@@ -1659,7 +1680,7 @@ numVars <-
     VMT_pop, 
     #total_pop.y, 
     #med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-    road_age,potholes_len, waze_len, crash_len, n_hydro_int) %>%
+    road_age,potholes_len, waze_len, crash_len, n_hydro_int, dist_major_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1717,7 +1738,7 @@ Road age and pothole numbers have significant correlations with PCI values, and 
 numVars_PCI <-
   EPCenterline_new5 %>%
   dplyr::select(VMT_pop, PCI_2018,
-    road_age, potholes_len, waze_len, crash_len, n_hydro_int) %>%
+    road_age, potholes_len, waze_len, crash_len, n_hydro_int, dist_major_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
