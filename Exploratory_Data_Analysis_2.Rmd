@@ -111,7 +111,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-#source("Jenna.R")
+source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
@@ -1414,15 +1414,15 @@ EPCenterline_new$crash_len <- as.numeric(as.character(EPCenterline_new$crash_len
 # map crashes by length
 crash_breaks = c(1, 5, 10, 25, 100, 900)
 ggplot() +
-  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data=El_Paso_city, aes())+
   geom_sf(data = EPCenterline_new, aes(color = crash_len)) +
-  scale_color_viridis(direction=-1, option='G', breaks=crash_breaks, limits=c(1,100))+
+  scale_color_viridis(direction=-1, option='G', breaks=crash_breaks, limits=c(1,156))+
   labs(title = "Crashes in 2018",
        subtitle = "El Paso, TX") +
   mapTheme()
 ```
 
-The distribution of crash data is also left-skewed, with a range of 0 to156 for the crash numbers and 0 to 881 crashes per 100 meters.
+The distribution of crash data is also left-skewed, with a range of 0 to 156 for the crash numbers and 0 to 881 crashes per 100 meters.
 
 ```{r road centerlines by crash count histogram, message=FALSE, warning=FALSE}
 # excluding segments with 0 crashes
@@ -1632,7 +1632,13 @@ EPCenterline_new4 <- EPCenterline_new3 %>%
 At this point we also create a new feature for the number of times a road centerline intersects a hydrology feature across El Paso. This new feature is joined to the main dataset.
 
 ```{r hydrology intersections, message=FALSE, warning=FALSE}
-EPCenterline_new4 <- EPCenterline_new4 %>% mutate(n_hydro_int = lengths(st_intersects(EPCenterline_new4, EPhydrology)))
+#EPCenterline_new4 <- EPCenterline_new4 %>% mutate(n_hydro_int = lengths(st_intersects(EPCenterline_new4, EPhydrology)))
+
+#return index of nearest feat in hydro to each feature in EPCenterline_new4
+nearest_hydro <- st_nearest_feature(EPCenterline_new4, EPhydrology) 
+
+EPCenterline_new4 <- EPCenterline_new4 %>%
+  mutate(dist_hydro = st_distance(EPCenterline_new4, EPhydrology[nearest_hydro,], by_element=TRUE))
 ```
 
 ### 4.4.9 Road Connectivity
@@ -1680,7 +1686,7 @@ numVars <-
     VMT_pop, 
     #total_pop.y, 
     #med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-    road_age,potholes_len, waze_len, crash_len, n_hydro_int, dist_major_int) %>%
+    road_age,potholes_len, waze_len, crash_len, dist_hydro, dist_major_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1689,7 +1695,7 @@ numVars_withCensusVars <-
   dplyr::select(#potholes_count, waze_count, crash_count, 
     VMT_pop,
     med_hh_income, med_rent, pct_transport_to_work, pctWhite, pctNotHL, 
-    road_age,potholes_len, waze_len, crash_len, n_hydro_int) %>%
+    road_age,potholes_len, waze_len, crash_len, dist_hydro) %>%
   st_drop_geometry() %>%
   na.omit()
 
@@ -1738,7 +1744,7 @@ Road age and pothole numbers have significant correlations with PCI values, and 
 numVars_PCI <-
   EPCenterline_new5 %>%
   dplyr::select(VMT_pop, PCI_2018,
-    road_age, potholes_len, waze_len, crash_len, n_hydro_int, dist_major_int) %>%
+    road_age, potholes_len, waze_len, crash_len, dist_hydro, dist_major_int) %>%
   st_drop_geometry() %>%
   na.omit()
 
