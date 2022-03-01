@@ -59,7 +59,7 @@ palette_4 <-c("#08519c","#3bf0c0","#e6a52f","#e76420")
 palette_2 <-c("#e6a52f","#08519c")
 palette_3 <-c("#e6a52f","#08519c", "#e76420")
 
-
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
 ```
 
 ```{r add plot and map themes for default visualizations, message=FALSE, warning=FALSE}
@@ -1662,6 +1662,139 @@ EPCenterline_new4 <- EPCenterline_new4 %>%
   mutate(dist_major_int = st_distance(roads_by_class, major_intersections[nearest_major_int,], by_element=TRUE))
 ```
 
+### 4.4.10 Fishnet
+
+```{r create fishnet}
+# create the fishnet and count the parking number
+fishnet_sf <- 
+  st_make_grid(El_Paso_city,
+               cellsize = 200, 
+               square = TRUE) %>%
+  .[El_Paso_city] %>%           
+  st_sf() %>%
+  mutate(uniqueID = rownames(.))
+```
+
+```{r join waze data into fishnet}
+# select the fishnet grids with waze jams
+waze_net <- 
+  dplyr::select(waze_sf) %>% 
+  mutate(countJams = 1) %>% 
+  aggregate(., fishnet_sf, sum) %>%
+  mutate(countJams = replace_na(countJams, 0),
+         uniqueID = rownames(.),
+         cvID = sample(round(nrow(fishnet_sf) / 8), 
+                       size=nrow(fishnet_sf), replace = TRUE)) %>%
+  filter(countJams>0)
+
+
+waze_net <-
+  waze_net %>%
+  dplyr::select(geometry, uniqueID, countJams)
+
+```
+
+```{r plot the waze net}
+ggplot() +
+  geom_sf(data = El_Paso_city, color = "grey") +
+  geom_sf(data = waze_net, aes(fill = q5(countJams)), color = NA) +
+  #geom_sf(data = fishnet_sf, fill = "transparent")+
+  scale_fill_manual(values = palette_5,
+                    labels = qBr(waze_net, "countJams"),
+                    name = "Jam #")+
+  labs(title = "Waze Jam Counts",
+       subtitle = "El Paso, TX")+
+  mapTheme()
+
+ggplot(waze_net, aes(x=countJams)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
+  # scale_x_continuous(limits = c(1, 150)) +
+  labs(title = "Distribution of Waze Jam Numbers in Fishnet",
+       subtitle = "El Paso, TX") +
+  plotTheme()
+```
+
+```{r join crash data into fishnet}
+crash_net <- 
+  dplyr::select(crash18_sf) %>% 
+  mutate(countCrash = 1) %>% 
+  aggregate(., fishnet_sf, sum) %>%
+  mutate(countCrash = replace_na(countCrash, 0),
+         uniqueID = rownames(.),
+         cvID = sample(round(nrow(fishnet_sf) / 8), 
+                       size=nrow(fishnet_sf), replace = TRUE)) %>%
+  filter(countCrash>0)
+
+crash_net <-
+  crash_net %>%
+  dplyr::select(geometry, uniqueID, countCrash)
+```
+
+
+```{r plot the crash net}
+ggplot() +
+  geom_sf(data = El_Paso_city, color = "grey") +
+  geom_sf(data = crash_net, aes(fill = q5(countCrash)), color = NA) +
+  scale_fill_manual(values = palette_5,
+                    labels = qBr(crash_net, "countCrash"),
+                    name = "Crash #")+
+  labs(title = "Crash Counts",
+       subtitle = "El Paso, TX")+
+  mapTheme()
+
+ggplot(crash_net, aes(x=countCrash)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
+  # scale_x_continuous(limits = c(1, 150)) +
+  labs(title = "Distribution of Crash Numbers in Fishnet",
+       subtitle = "El Paso, TX") +
+  plotTheme()
+```
+
+```{r join potholes data into fishnet}
+pothole_net <- 
+  dplyr::select(potholes_sf) %>% 
+  mutate(countPothole = 1) %>% 
+  aggregate(., fishnet_sf, sum) %>%
+  mutate(countPothole = replace_na(countPothole, 0),
+         uniqueID = rownames(.),
+         cvID = sample(round(nrow(fishnet_sf) / 8), 
+                       size=nrow(fishnet_sf), replace = TRUE)) %>%
+  filter(countPothole>0)
+
+pothole_net <-
+  pothole_net %>%
+  dplyr::select(geometry, uniqueID, countPothole)
+```
+
+
+```{r plot the pothole net}
+ggplot() +
+  geom_sf(data = El_Paso_city, color = "grey") +
+  geom_sf(data = pothole_net, aes(fill = q5(countPothole)), color = NA) +
+  scale_fill_manual(values = palette_5,
+                    labels = qBr(pothole_net, "countPothole"),
+                    name = "Pothole #")+
+  labs(title = "Pothole Counts",
+       subtitle = "El Paso, TX")+
+  mapTheme()
+
+ggplot(pothole_net, aes(x=countPothole)) + 
+  geom_histogram(color="white", fill="#e6a52f", binwidth = 10) + 
+  # scale_x_continuous(limits = c(1, 150)) +
+  labs(title = "Distribution of Pothole Numbers in Fishnet",
+       subtitle = "El Paso, TX") +
+  plotTheme()
+```
+
+
+```{r join three fishnet layers together}
+all_net <-
+  waze_net %>%
+  merge(crash_net %>% st_drop_geometry()) %>%
+  merge(pothole_net %>% st_drop_geometry())
+```
+
+
 ## 4.5 Correlation Exploration
 
 ### 4.5.1 Correlation Matrix for Numerical Variables
@@ -1749,6 +1882,28 @@ numVars_PCI <-
   na.omit()
 
 numVars_PCI %>% 
+  gather(Variable, Value, -PCI_2018) %>% 
+  ggplot(aes(Value, PCI_2018)) +
+  geom_point(size = 0.5, color = "grey") + 
+  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
+     facet_wrap(~Variable, ncol = 3, scales = "free") +
+     labs(title = "Numeric Variables vs. PCI",
+          subtitle = "El Paso, TX") + 
+  stat_cor(aes(label = ..r.label..), label.x = 0) +
+  plotTheme()
+```
+
+```{r plot the correlations}
+centerline_grid <-
+  EPCenterline_new5 %>%
+  st_join(all_net %>% 
+            st_transform('ESRI:102339')) %>%
+  dplyr::select(PCI_2018, uniqueID, countJams, countCrash, countPothole, geometry) %>%
+  na.omit()
+
+centerline_grid %>% 
+  st_drop_geometry() %>%
+  dplyr::select(PCI_2018, countJams, countCrash, countPothole) %>%
   gather(Variable, Value, -PCI_2018) %>% 
   ggplot(aes(Value, PCI_2018)) +
   geom_point(size = 0.5, color = "grey") + 
