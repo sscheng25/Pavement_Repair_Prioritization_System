@@ -52,6 +52,7 @@ library(leaflet)
 library(gganimate)
 library(gifski)
 library(transformr)
+library(jtools)
 
 palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
 palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
@@ -111,12 +112,12 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Jenna.R")
+# source("Jenna.R")
 ```
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("Kristin.R")
+# source("Kristin.R")
 ```
 
 # 1. Project Introduction
