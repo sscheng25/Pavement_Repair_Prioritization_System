@@ -964,7 +964,7 @@ potholes_animation <-
 #ani.options(interval = 0.2)
 
 
-gganimate::animate(potholes_animation, duration=1, renderer = gifski_renderer())
+# gganimate::animate(potholes_animation, duration=1, renderer = gifski_renderer())
 ```
 
 ![](gif/potholes_map.gif "animated_potholes_map")
