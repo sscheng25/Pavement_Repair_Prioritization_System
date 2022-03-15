@@ -105,8 +105,9 @@ plotTheme <- function(base_size = 12) {
 
 ```
 
+Please download the EDA.RData file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
+
 ```{r import rdata from EDA}
-# Please download this from google drive and put it under Data folder, I've added it to git ignore
 load("Data/EDA.RData")
 ```
 
