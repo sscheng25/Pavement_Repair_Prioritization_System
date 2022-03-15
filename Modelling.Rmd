@@ -1,0 +1,262 @@
+---
+title: "Modelling - El Paso"
+author: "Sisun Cheng, Kristin Chang, Jenna Epstein"
+date: "2022/3"
+output:
+  html_document:
+    toc: yes
+    toc_float: TRUE
+    code_folding: hide
+editor_options:
+  chunk_output_type: inline
+---
+# Set Up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = FALSE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE, results='hide'}
+library(tidyverse)
+library(sf)
+library(lubridate)
+library(tigris)
+library(tidycensus)
+library(gganimate)
+library(viridis)
+library(riem)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RSocrata)
+library(caret)
+library(purrr)
+library(FNN)
+library(stargazer)
+library(dplyr)
+library(spatstat)
+library(raster)
+library(spdep)
+library(grid)
+library(mapview)
+library(stringr)
+library(ggcorrplot)
+library(scales)
+library(colorspace)
+library(rgdal)          
+library(RColorBrewer) 
+library(rasterVis)    
+library(sp)
+library(ggpubr)
+library(leaflet)
+library(gganimate)
+library(gifski)
+library(transformr)
+library(jtools)
+
+palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
+palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
+palette_4 <-c("#08519c","#3bf0c0","#e6a52f","#e76420")
+palette_2 <-c("#e6a52f","#08519c")
+palette_3 <-c("#e6a52f","#08519c", "#e76420")
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+```
+
+```{r add plot and map themes for default visualizations, message=FALSE, warning=FALSE}
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.text.x = element_text(size = 14))
+}
+
+plotTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle = element_text(face="italic"),
+    plot.caption = element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line("grey80", size = 0.1),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.background = element_rect(fill = "grey80", color = "white"),
+    strip.text = element_text(size=12),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10),
+    plot.background = element_blank(),
+    legend.background = element_blank(),
+    legend.title = element_text(colour = "black", face = "italic"),
+    legend.text = element_text(colour = "black", face = "italic"),
+    strip.text.x = element_text(size = 14)
+  )
+}
+
+```
+
+```{r import rdata from EDA}
+# Please download this from google drive and put it under Data folder, I've added it to git ignore
+load("Data/EDA.RData")
+```
+
+# Add Amenities
+
+```{r load amentiy data from outside source}
+amenity <- read.csv("Data/OSM_amenities/OSM_amenity.csv")
+
+amenity_sf <- 
+  amenity %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102339')
+```
+
+
+```{r plot the amenities}
+ggplot() +
+  geom_sf(data = El_Paso_city, color = "grey") +
+  geom_sf(data = amenity_sf, aes(color = amenity), size=0.5, show.legend = "point") +
+  labs(title = "Open Street Map Amenities",
+       subtitle = "El Paso, TX")+
+  mapTheme()
+
+ggplot(amenity_sf, aes(y=amenity)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Amenities by Type",
+       x="Count",
+       y="Type",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+```{r divide amenities to different categories}
+food_drink <- c('restaurant', 'fast_food', 'cafe', 'bar', 'ice_cream', 'pub')
+entertainment <- c('arts_centre', 'cinema', 'theatre')
+car_facility <- c('fuel', 'car_rental', 'car_wash', 'parking', 'parking_space')
+
+am_food_drink <- amenity_sf %>%
+  filter(amenity %in% food_drink)
+am_entertainment <- amenity_sf %>%
+  filter(amenity %in% entertainment)
+am_car_facility <- amenity_sf %>%
+  filter(amenity %in% car_facility)
+
+```
+
+
+```{r join the amenities to main df}
+# KNN function
+st_c <- st_coordinates
+EPCenterline_new6 <-
+  EPCenterline_new5 %>%
+  mutate(
+      food_drink_nn3 = nn_function(na.omit(st_c(st_centroid(EPCenterline_new5))),na.omit(st_c(am_food_drink)), 3),
+      entertainment_nn3 = nn_function(na.omit(st_c(st_centroid(EPCenterline_new5))),na.omit(st_c(am_entertainment)), 3),
+      car_facility_nn3 = nn_function(na.omit(st_c(st_centroid(EPCenterline_new5))),na.omit(st_c(am_car_facility)), 3),
+  )
+
+```
+
+```{r test correlation for PCI and knns}
+EPCenterline_new6 %>% 
+  st_drop_geometry() %>%
+  dplyr::select(PCI_2018, food_drink_nn3, entertainment_nn3, car_facility_nn3) %>%
+  gather(Variable, Value, -PCI_2018) %>% 
+  ggplot(aes(Value, PCI_2018)) +
+  geom_point(size = 0.5, color = "grey") + 
+  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
+     facet_wrap(~Variable, ncol = 3, scales = "free") +
+     labs(title = "Nearest Neighbor Variables vs. PCI",
+          subtitle = "El Paso, TX") + 
+  stat_cor(aes(label = ..r.label..), label.x = 0) +
+  plotTheme()
+```
+
+# Modelling
+
+```{r start with linear regression}
+# glimpse(EPCenterline_new6)
+
+OLS_reg1 <- 
+  lm(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
+       car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+       road_age + VMT_pop + dist_hydro + dist_major_int + 
+       # med_hh_income + pct_transport_to_work + pctWhite + 
+       CLASS + land_use_type, 
+     data = EPCenterline_new6)
+
+stargazer(OLS_reg1, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
+summary(OLS_reg1)
+
+EP_model_1 <-
+  EPCenterline_new6 %>%
+  mutate(PCI.Predict = predict(OLS_reg1, EPCenterline_new6),
+         PCI.Error = PCI.Predict - PCI_2018,
+         PCI.AbsError = abs(PCI.Predict - PCI_2018),
+         PCI.APE = (abs(PCI.Predict - PCI_2018)) / PCI.Predict) 
+
+MAE <- mean(EP_model_1$PCI.AbsError, na.rm = T)
+MAPE <- mean(EP_model_1$PCI.APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+
+```{r try poisson regression}
+poisson_reg1 <- glm(formula = 
+                      PCI_2018 ~  crash_len + potholes_len + #waze_count + 
+                       car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+                       road_age + VMT_pop + dist_hydro + dist_major_int + 
+                       # med_hh_income + pct_transport_to_work + pctWhite + 
+                       CLASS + land_use_type, 
+                    data = EPCenterline_new6, 
+                    family = poisson)
+stargazer(poisson_reg1, type = "text",title = "Poisson Regression Results", align=TRUE, no.space=TRUE)
+
+EP_model_2 <-
+  EPCenterline_new6 %>%
+  mutate(PCI.Predict = predict(poisson_reg1, EPCenterline_new6),
+         PCI.Error = PCI.Predict - PCI_2018,
+         PCI.AbsError = abs(PCI.Predict - PCI_2018),
+         PCI.APE = (abs(PCI.Predict - PCI_2018)) / PCI.Predict) 
+
+MAE <- mean(EP_model_2$PCI.AbsError, na.rm = T)
+MAPE <- mean(EP_model_2$PCI.APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+# Cross Validation
+
+```{r k-fold cross validation for OLS model, warning=TRUE}
+fitControl <- trainControl(method = "cv", number = 100)
+set.seed(825)
+
+OLS_reg1.cv <- 
+  train(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
+         car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+         road_age + VMT_pop + dist_hydro + dist_major_int + 
+         # med_hh_income + pct_transport_to_work + pctWhite + 
+         CLASS + land_use_type,
+       data = EPCenterline_new6,
+        method = "lm", trControl = fitControl, na.action = na.pass)
+
+OLS_reg1.cv
+OLS_reg1.cv$resample[1:10,]
+```
+
+
+
