@@ -53,6 +53,7 @@ library(gganimate)
 library(gifski)
 library(transformr)
 library(jtools)
+library(stringr)
 
 palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
 palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
@@ -232,6 +233,111 @@ OLS_reg_roadageonly <- lm(PCI_2018 ~ road_age_dummy, data = EPCenterline_new6)
 stargazer(OLS_reg_roadageonly, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
 summary(OLS_reg_roadageonly)
 
+```
+
+# Updating crash data - putting this here so crash_count gets updated correctly in EPCenterline_new6
+```{r udpated crash data}
+#read in new data
+crash16 <- st_read("Data/CRIS2016/CRIS2016.shp")
+crash17<- st_read("Data/CRIS2017/CRIS2017.shp")
+crash19<- st_read("Data/CRIS2019/CRIS2019.shp")
+crash20<- st_read("Data/CRIS2020/CRIS2020.shp")
+crash21<- st_read("Data/CRIS2021/CRIS2021.shp")
+
+#combine past years
+crash16_18 <- rbind(crash16, crash17, crash18)
+crash19_21 <- rbind(crash19, crash20, crash21)
+
+#replace 0s in lat long columns with NA so we can omit
+crash16_18trim<-crash16_18[!(crash16_18$Latitude==0 | crash16_18$Longitude==0),]
+crash19_21trim<-crash19_21[!(crash19_21$Latitude==0 | crash19_21$Longitude==0),]
+
+#transforming to our crs
+crash16_18sf <- crash16_18trim %>%
+  na.omit() %>%
+  st_as_sf(coords = c("Latitude", "Longitude"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+crash19_21sf <- crash19_21trim %>%
+  na.omit() %>%
+  st_as_sf(coords = c("Latitude", "Longitude"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+```
+
+```{r join crash data to EPcenterline}
+#join crashes to EPCenterline using nearest feature 
+crash_centerlines16_18 <-  st_join(crash16_18sf, EPCenterline_buffer, join = st_nearest_feature)
+crash_centerlines19_21 <-  st_join(crash19_21sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+crash_centerlines_clean16_18 <- crash_centerlines16_18 %>%
+  dplyr::select(Crash_ID, index) %>% st_drop_geometry()
+
+crash_centerlines_clean19_21 <- crash_centerlines19_21 %>%
+  dplyr::select(Crash_ID, index) %>% st_drop_geometry()
+
+#drop old columns
+EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(crash_count,crash_len))
+
+# count crashes per street segment
+crash_groupings16_18 <- crash_centerlines_clean16_18 %>%
+  group_by(index) %>%
+  summarize(crash_count=n())
+
+crash_groupings19_21 <- crash_centerlines_clean19_21 %>%
+group_by(index) %>%
+summarize(crash_count=n())
+
+#then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, crash_groupings16_18, by = "index", all.x=TRUE)
+
+#replace NAs in crash count column with 0
+EPCenterline_new6$crash_count[is.na(EPCenterline_new6$crash_count)] <- 0
+
+# calculate crahs per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(crash_len = crash_count*100/pave_length)
+
+# convert to numeric
+EPCenterline_new6$crash_len <- as.numeric(as.character(EPCenterline_new6$crash_len))
+```
+
+# Roadbed Data
+
+```{r join roadbed feats to centerlines}
+#rename target column and drop uneccessary columns
+roadbed_base_PCI <- roadbed_base_PCI %>%
+  mutate(rb_base = BASE_TYPE_)%>%
+  dplyr::select(index, rb_base)%>%
+  st_drop_geometry()
+
+roadbed_surface_PCI <- roadbed_surface_PCI %>%
+  mutate(rb_surface = SRFC_TYPE)%>%
+  dplyr::select(index, rb_surface)%>%
+  st_drop_geometry()
+
+#get rid of duplicates - selecting first value of the group (duplicates have same value)
+roadbed_base_PCI <- roadbed_base_PCI %>%
+  group_by(index)%>%
+  summarize(rb_base = first(rb_base))
+
+roadbed_surface_PCI <- roadbed_surface_PCI %>%
+  group_by(index)%>%
+  summarize(rb_surface = first(rb_surface))
+
+roadbed_surface_PCI$rb_surface <- str_to_title(roadbed_surface_PCI$rb_surface)
+
+#join to EPCenterline_new6
+EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_base_PCI, on="index")
+EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_surface_PCI, on="index")
+
+#change NA values to unknown category
+EPCenterline_new6[,c("rb_base","rb_surface")][is.na(EPCenterline_new6[,c("rb_base","rb_surface")])] <- "Unknown"
 ```
 
 # Modeling
