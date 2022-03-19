@@ -182,17 +182,69 @@ EPCenterline_new6 %>%
   plotTheme()
 ```
 
-# Modelling
+## FEMA Flood Zones - Preliminary 2020 Zones
+
+```{r}
+prelim_floodzones_2020 <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp" )%>%
+  st_transform('ESRI:102339')
+
+```
+
+
+```{r clip prelim flood zones to city, message=FALSE, warning=FALSE}
+# clip flood zones to city bounds
+EPcity_prelim_floodzones_2020 <- st_intersection(prelim_floodzones_2020, El_Paso_city)
+
+EPcity_prelim_floodzones_2020 <- EPcity_prelim_floodzones_2020 %>% dplyr::filter(EPcity_prelim_floodzones_2020$STUDY_TYP == "SFHAs WITH HIGH FLOOD RISK")
+
+```
+
+
+```{r visualize flood zones, message=FALSE, warning=FALSE}
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EPcity_prelim_floodzones_2020, aes(fill=STUDY_TYP), color="transparent", fill="#3FB0C0")+
+  #scale_fill_viridis_d(direction=-1, option='G')+
+  labs(title="Preliminary Flood Zone 2020: Area of High Flood Risk",
+       fill= "",
+       subtitle="El Paso, TX", caption="Source: City of El Paso; FEMA") + mapTheme()
+
+```
+
+
+```{r flood zones by high risk, message=FALSE, warning=FALSE}
+EPCenterline_new6 <- EPCenterline_new6 %>% mutate(n_floodzone_int = lengths(st_intersects(EPCenterline_new6, EPcity_prelim_floodzones_2020)))
+
+# adding a column for yes or no for if intersected a flood zone area at all or not
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(floodzone_highrisk = ifelse(EPCenterline_new6$n_floodzone_int > 0, "Yes", "No"))
+```
+
+## Testing out a dummy variable for ROAD AGE
+```{r}
+# Create dummy variable
+EPCenterline_new6$road_age_dummy <- ifelse(EPCenterline_new6$road_age >= 20, 1, 0)
+
+# run a baby model
+OLS_reg_roadageonly <- lm(PCI_2018 ~ road_age_dummy, data = EPCenterline_new6)
+
+stargazer(OLS_reg_roadageonly, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
+summary(OLS_reg_roadageonly)
+
+```
+
+# Modeling
 
 ```{r start with linear regression}
 # glimpse(EPCenterline_new6)
 
 OLS_reg1 <- 
   lm(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
-       car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+       #car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
        road_age + VMT_pop + dist_hydro + dist_major_int + 
        # med_hh_income + pct_transport_to_work + pctWhite + 
-       CLASS + land_use_type, 
+       CLASS + land_use_type + floodzone_highrisk,
      data = EPCenterline_new6)
 
 stargazer(OLS_reg1, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
@@ -248,7 +300,7 @@ set.seed(825)
 
 OLS_reg1.cv <- 
   train(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
-         car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+         #car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
          road_age + VMT_pop + dist_hydro + dist_major_int + 
          # med_hh_income + pct_transport_to_work + pctWhite + 
          CLASS + land_use_type,
