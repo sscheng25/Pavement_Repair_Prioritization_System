@@ -108,13 +108,13 @@ plotTheme <- function(base_size = 12) {
 
 Please download the EDA.RData file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
 
-```{r import rdata from EDA}
+```{r import rdata from EDA, message=FALSE, warning=FALSE}
 load("Data/EDA.RData")
 ```
 
 # Add Amenities
 
-```{r load amentiy data from outside source}
+```{r load amentiy data from outside source, message=FALSE, warning=FALSE}
 amenity <- read.csv("Data/OSM_amenities/OSM_amenity.csv")
 
 amenity_sf <- 
@@ -124,7 +124,7 @@ amenity_sf <-
 ```
 
 
-```{r plot the amenities}
+```{r plot the amenities, message=FALSE, warning=FALSE}
 ggplot() +
   geom_sf(data = El_Paso_city, color = "grey") +
   geom_sf(data = amenity_sf, aes(color = amenity), size=0.5, show.legend = "point") +
@@ -140,7 +140,7 @@ ggplot(amenity_sf, aes(y=amenity)) +
        subtitle = "El Paso, TX") + plotTheme()
 ```
 
-```{r divide amenities to different categories}
+```{r divide amenities to different categories, message=FALSE, warning=FALSE}
 food_drink <- c('restaurant', 'fast_food', 'cafe', 'bar', 'ice_cream', 'pub')
 entertainment <- c('arts_centre', 'cinema', 'theatre')
 car_facility <- c('fuel', 'car_rental', 'car_wash', 'parking', 'parking_space')
@@ -155,7 +155,7 @@ am_car_facility <- amenity_sf %>%
 ```
 
 
-```{r join the amenities to main df}
+```{r join the amenities to main df, message=FALSE, warning=TRUE}
 # KNN function
 st_c <- st_coordinates
 EPCenterline_new6 <-
@@ -168,7 +168,7 @@ EPCenterline_new6 <-
 
 ```
 
-```{r test correlation for PCI and knns}
+```{r test correlation for PCI and knns, message=FALSE, warning=FALSE}
 EPCenterline_new6 %>% 
   st_drop_geometry() %>%
   dplyr::select(PCI_2018, food_drink_nn3, entertainment_nn3, car_facility_nn3) %>%
@@ -183,16 +183,16 @@ EPCenterline_new6 %>%
   plotTheme()
 ```
 
-## FEMA Flood Zones - Preliminary 2020 Zones
+## FEMA Flood Zones - Preliminary 2020 Zones with High Risk
 
-```{r}
+```{r bring in the 2020 preliminary flood zone data, message=FALSE, warning=FALSE}
 prelim_floodzones_2020 <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp" )%>%
   st_transform('ESRI:102339')
 
 ```
 
 
-```{r clip prelim flood zones to city, message=FALSE, warning=FALSE}
+```{r clip prelim flood zones to city boundaries, message=FALSE, warning=FALSE}
 # clip flood zones to city bounds
 EPcity_prelim_floodzones_2020 <- st_intersection(prelim_floodzones_2020, El_Paso_city)
 
@@ -236,7 +236,7 @@ summary(OLS_reg_roadageonly)
 ```
 
 # Updating crash data - putting this here so crash_count gets updated correctly in EPCenterline_new6
-```{r udpated crash data}
+```{r udpated crash data, message=FALSE, warning=FALSE}
 #read in new data
 crash16 <- st_read("Data/CRIS2016/CRIS2016.shp")
 crash17<- st_read("Data/CRIS2017/CRIS2017.shp")
@@ -268,7 +268,7 @@ crash19_21sf <- crash19_21trim %>%
   st_transform('ESRI:102339')
 ```
 
-```{r join crash data to EPcenterline}
+```{r join crash data to EPcenterline, message=FALSE, warning=FALSE}
 #join crashes to EPCenterline using nearest feature 
 crash_centerlines16_18 <-  st_join(crash16_18sf, EPCenterline_buffer, join = st_nearest_feature)
 crash_centerlines19_21 <-  st_join(crash19_21sf, EPCenterline_buffer, join = st_nearest_feature)
@@ -286,31 +286,54 @@ EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(crash_count,crash_len)
 # count crashes per street segment
 crash_groupings16_18 <- crash_centerlines_clean16_18 %>%
   group_by(index) %>%
-  summarize(crash_count=n())
+  summarize(crash_count16_18=n())
 
 crash_groupings19_21 <- crash_centerlines_clean19_21 %>%
 group_by(index) %>%
-summarize(crash_count=n())
+summarize(crash_count19_21=n())
+```
 
-#then join back to initial EPCenterline using index as the ID
+
+```{r join crash data to EPcenterline for 2016 to 2018, message=FALSE, warning=FALSE}
+# for 2016-2018...
+
+# then join back to initial EPCenterline using index as the ID
 EPCenterline_new6 <- merge(EPCenterline_new6, crash_groupings16_18, by = "index", all.x=TRUE)
 
-#replace NAs in crash count column with 0
-EPCenterline_new6$crash_count[is.na(EPCenterline_new6$crash_count)] <- 0
+# replace NAs in crash count column with 0
+EPCenterline_new6$crash_count16_18[is.na(EPCenterline_new6$crash_count16_18)] <- 0
 
-# calculate crahs per 100 meters
+# calculate crashes per 100 meters
 EPCenterline_new6 <-
   EPCenterline_new6 %>%
-  mutate(crash_len = crash_count*100/pave_length)
+  mutate(crash_len16_18 = crash_count16_18*100/pave_length)
 
 # convert to numeric
-EPCenterline_new6$crash_len <- as.numeric(as.character(EPCenterline_new6$crash_len))
+EPCenterline_new6$crash_len16_18 <- as.numeric(as.character(EPCenterline_new6$crash_len16_18))
+```
+
+
+```{r join crash data to EPcenterline for 2019 to 2021, message=FALSE, warning=FALSE}
+# then again for 2019-2021...
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, crash_groupings19_21, by = "index", all.x=TRUE)
+
+# replace NAs in crash count column with 0
+EPCenterline_new6$crash_count19_21[is.na(EPCenterline_new6$crash_count19_21)] <- 0
+
+# calculate crashes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(crash_len19_21 = crash_count19_21*100/pave_length)
+
+# convert to crash_len19_21
+EPCenterline_new6$crash_len19_21 <- as.numeric(as.character(EPCenterline_new6$crash_len19_21))
 ```
 
 # Roadbed Data
 
 ```{r join roadbed feats to centerlines}
-#rename target column and drop uneccessary columns
+#rename target column and drop unneccessary columns
 roadbed_base_PCI <- roadbed_base_PCI %>%
   mutate(rb_base = BASE_TYPE_)%>%
   dplyr::select(index, rb_base)%>%
@@ -338,6 +361,91 @@ EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_surface_PCI, on="index
 
 #change NA values to unknown category
 EPCenterline_new6[,c("rb_base","rb_surface")][is.na(EPCenterline_new6[,c("rb_base","rb_surface")])] <- "Unknown"
+```
+
+## Creating new columns for potholes counts and lengths for the two different year groupings
+```{r}
+#drop old columns
+EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(potholes_count,potholes_len))
+```
+```{r}
+#clean up potholes grouping dfs
+potholes_sf_2016to2018 <- subset(potholes_sf_2016to2018, select= c(YEAR, geometry, WORKORDERID))
+potholes_sf_2019to2021 <- subset(potholes_sf_2019to2021, select= c(YEAR, geometry, WORKORDERID))
+
+```
+
+```{r}
+#join potholes to EPCenterline using nearest feature 
+potholes_centerlines_2016to2018 <-  st_join(potholes_sf_2016to2018, EPCenterline_buffer, join = st_nearest_feature)
+potholes_centerlines_2019to2021 <-  st_join(potholes_sf_2019to2021, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+potholes_centerlines_clean_2016to2018 <- potholes_centerlines_2016to2018 %>%
+  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
+
+potholes_centerlines_clean_2019to2021 <- potholes_centerlines_2019to2021 %>%
+  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
+
+# count potholes per street segment
+potholes_groupings_2016to2018 <- potholes_centerlines_clean_2016to2018 %>%
+  group_by(index) %>%
+  summarize(potholes_count16_18=n())
+
+potholes_groupings_2019to2021 <- potholes_centerlines_clean_2019to2021 %>%
+group_by(index) %>%
+summarize(potholes_count19_21=n())
+
+```
+
+```{r}
+# for 2016-2018...
+
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, potholes_groupings_2016to2018, by = "index", all.x=TRUE)
+
+# replace NAs in potholes count column with 0
+EPCenterline_new6$potholes_count16_18[is.na(EPCenterline_new6$potholes_count16_18)] <- 0
+
+# calculate potholes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(potholes_len16_18 = potholes_count16_18*100/pave_length)
+
+# convert to numeric
+EPCenterline_new6$potholes_len16_18 <- as.numeric(as.character(EPCenterline_new6$potholes_len16_18))
+```
+
+```{r}
+# for 2019-2021...
+
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, potholes_groupings_2019to2021, by = "index", all.x=TRUE)
+
+# replace NAs in potholes count column with 0
+EPCenterline_new6$potholes_count19_21[is.na(EPCenterline_new6$potholes_count19_21)] <- 0
+
+# calculate potholes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(potholes_len19_21 = potholes_count19_21*100/pave_length)
+
+# convert to numeric
+EPCenterline_new6$potholes_len19_21 <- as.numeric(as.character(EPCenterline_new6$potholes_len19_21))
+```
+
+
+# SPLITTING DATA
+```{r EPCenterline data for 2016 to 2018 that includes PCI 2018}
+# 2016-2018
+EPCenterline_2016to2018<- subset(EPCenterline_new6, select= -c(crash_count19_21, crash_len19_21, potholes_count19_21,potholes_len19_21))
+
+```
+
+```{r EPCenterline data for 2019 to 2021 that we will PREDICT ON}
+# 2019-2021
+EPCenterline_2016to2018 <- subset(EPCenterline_new6, select= -c(crash_count16_18, crash_len16_18, potholes_count16_18,potholes_len16_18, PCI_2018))
+
 ```
 
 # Modeling
