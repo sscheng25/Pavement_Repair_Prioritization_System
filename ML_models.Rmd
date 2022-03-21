@@ -1,0 +1,215 @@
+---
+title: "ML_models"
+author: "Sisun Cheng"
+date: "2022/3/20"
+output: html_document
+---
+
+# Machine Learning Models
+
+```{r machine learning libraries, message=TRUE, warning=TRUE}
+library(randomForest)
+library(e1071)  # SVM
+library(xgboost)
+library(readr)
+library(stringr)
+library(caret)
+library(car)
+```
+
+## Split to train and test set
+
+```{r split the data to train and test set}
+set.seed(111)
+EP_model <- EPCenterline_2016to2018 %>% na.omit()
+
+EP_model$ind <- sample(2, nrow(EP_model), replace = TRUE, prob=c(0.8, 0.2))
+
+EP_model_train <-
+  EP_model %>% 
+  subset(ind == 1) 
+
+EP_model_test <-
+  EP_model %>% 
+  subset(ind == 2) 
+```
+
+## Random Forest
+
+```{r set up rf model1}
+rf_model1 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=1000,
+                         method = "rf")
+
+rf_model1
+importance(rf_model1)
+```
+
+```{r prediction with rf model 1}
+EP_model_test <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_model1, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / rf_predict) 
+
+
+MAE <- mean(EP_model_test$rf_absError, na.rm = T)
+MAPE <- mean(EP_model_test$rf_APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+## SVM
+
+```{r set up svm model 1}
+svm_reg1 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                 car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                 road_age + VMT_pop + dist_hydro + dist_major_int + 
+                 CLASS + land_use_type + 
+                 rb_base + rb_surface +
+                 floodzone_highrisk,
+               data = EP_model_train, 
+               kernel = "linear", 
+               cost = 10, 
+               scale = FALSE)
+print(svm_reg1)
+```
+
+```{r prediction with svm model 1}
+EP_model_test <- 
+  EP_model_test %>%
+  mutate(svm_predict = predict(svm_reg1, EP_model_test),
+         svm_error = svm_predict - PCI_2018,
+         svm_absError = abs(svm_predict - PCI_2018),
+         svm_APE = abs((svm_predict - PCI_2018)) / svm_predict) 
+
+
+MAE <- mean(EP_model_test$svm_absError, na.rm = T)
+MAPE <- mean(EP_model_test$svm_APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+## XGBoost
+
+```{r }
+xgb_train <-
+  EP_model %>% 
+  subset(ind == 1) %>%
+  dplyr::select(PCI_2018, crash_len16_18, potholes_len16_18,  
+                 car_facility_nn3, entertainment_nn3, food_drink_nn3,  
+                 road_age, VMT_pop, dist_hydro, dist_major_int,  
+                 CLASS, land_use_type,  
+                 #rb_base, rb_surface, 
+                 floodzone_highrisk, ind)
+xgb_test <-
+  EP_model %>% 
+  subset(ind == 2) %>%
+  dplyr::select(PCI_2018, crash_len16_18, potholes_len16_18,  
+                 car_facility_nn3, entertainment_nn3, food_drink_nn3,  
+                 road_age, VMT_pop, dist_hydro, dist_major_int,  
+                 CLASS, land_use_type,  
+                 #rb_base, rb_surface, 
+                 floodzone_highrisk, ind)
+
+xgb_all = rbind(xgb_train,xgb_test)
+```
+
+```{r one hot encoding}
+# one hot encoding
+ohe_feats = c('CLASS', 'land_use_type', 'floodzone_highrisk')
+dummies <- dummyVars(~ CLASS +  land_use_type + floodzone_highrisk, data = xgb_all)
+
+xgb_ohe <- as.data.frame(predict(dummies, newdata = xgb_all))
+xgb_combined <- cbind(xgb_all[,-c(which(colnames(xgb_all) %in% ohe_feats))], xgb_ohe)
+```
+
+```{r}
+xgb_train <- 
+  xgb_combined %>%
+  subset(ind == 1)
+
+xgb_test <- 
+  xgb_combined %>%
+  subset(ind == 2)
+
+x_train <-
+  xgb_train %>%
+  st_drop_geometry() %>%
+  dplyr::select(-ind, -PCI_2018)
+y_train <-
+  xgb_train %>%
+  st_drop_geometry() %>%
+  dplyr::select(PCI_2018)
+
+x_test <-
+  xgb_test %>%
+  st_drop_geometry() %>%
+  dplyr::select(-ind, -PCI_2018)
+y_test <-
+  xgb_test %>%
+  st_drop_geometry() %>%
+  dplyr::select(PCI_2018)
+
+train_set <- xgb.DMatrix(data = as.matrix(x_train), label = as.matrix(y_train))
+test_set <- xgb.DMatrix(data = as.matrix(x_test), label = as.matrix(y_test))
+```
+
+```{r}
+xgb <- xgboost(data = train_set,
+               #booster = 'gbtree', 
+               eta = 0.26,
+               max_depth = 3, 
+               nround=1000, 
+               subsample = 0.5,
+               colsample_bytree = 0.5,
+               objective = "reg:squarederror",
+)
+xgb
+```
+
+```{r}
+pred_xgb <- predict(xgb, as.matrix(x_test))
+mean(abs(pred_xgb - y_test)$PCI_2018) #MAE
+```
+
+```{r cv for xgb}
+hyper_grid <- expand.grid(max_depth = seq(1, 12, 2), eta = seq(.1, .3, .05))  
+
+for (j in 1:nrow(hyper_grid)) {
+  set.seed(123)
+  m_xgb_untuned <- xgb.cv(
+    data = train_set,
+    nrounds = 1000,
+    objective = "reg:squarederror",
+    early_stopping_rounds = 3,
+    nfold = 5,
+    max_depth = hyper_grid$max_depth[j],
+    eta = hyper_grid$eta[j]
+  )
+  
+  xgb_train_rmse[j] <- m_xgb_untuned$evaluation_log$train_rmse_mean[m_xgb_untuned$best_iteration]
+  xgb_test_rmse[j] <- m_xgb_untuned$evaluation_log$test_rmse_mean[m_xgb_untuned$best_iteration]
+  
+  cat(j, "\n")
+}    
+
+
+```
+
+
+
+
+
+
