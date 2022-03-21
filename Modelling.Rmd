@@ -223,7 +223,7 @@ EPCenterline_new6 <-
 ```
 
 ## Testing out a dummy variable for ROAD AGE
-```{r}
+```{r Testing out a dummy variable for ROAD AGE}
 # Create dummy variable
 EPCenterline_new6$road_age_dummy <- ifelse(EPCenterline_new6$road_age >= 20, 1, 0)
 
@@ -444,7 +444,7 @@ EPCenterline_2016to2018<- subset(EPCenterline_new6, select= -c(crash_count19_21,
 
 ```{r EPCenterline data for 2019 to 2021 that we will PREDICT ON}
 # 2019-2021
-EPCenterline_2016to2018 <- subset(EPCenterline_new6, select= -c(crash_count16_18, crash_len16_18, potholes_count16_18,potholes_len16_18, PCI_2018))
+EPCenterline_2019to2021 <- subset(EPCenterline_new6, select= -c(crash_count16_18, crash_len16_18, potholes_count16_18,potholes_len16_18, PCI_2018))
 
 ```
 
