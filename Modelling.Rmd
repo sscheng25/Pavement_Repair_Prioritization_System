@@ -454,7 +454,7 @@ EPCenterline_2019to2021 <- subset(EPCenterline_new6, select= -c(crash_count16_18
 # glimpse(EPCenterline_new6)
 
 OLS_reg1 <- 
-  lm(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
+  lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
        #car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
        road_age + VMT_pop + dist_hydro + dist_major_int + 
        # med_hh_income + pct_transport_to_work + pctWhite + 
@@ -482,7 +482,7 @@ kable(acc) %>%
 
 ```{r try poisson regression}
 poisson_reg1 <- glm(formula = 
-                      PCI_2018 ~  crash_len + potholes_len + #waze_count + 
+                      PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
                        car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
                        road_age + VMT_pop + dist_hydro + dist_major_int + 
                        # med_hh_income + pct_transport_to_work + pctWhite + 
@@ -513,7 +513,7 @@ fitControl <- trainControl(method = "cv", number = 100)
 set.seed(825)
 
 OLS_reg1.cv <- 
-  train(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
+  train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
          #car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
          road_age + VMT_pop + dist_hydro + dist_major_int + 
          # med_hh_income + pct_transport_to_work + pctWhite + 
