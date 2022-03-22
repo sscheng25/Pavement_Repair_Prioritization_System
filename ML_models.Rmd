@@ -57,7 +57,7 @@ EP_model_test <-
   mutate(rf_predict = predict(rf_model1, EP_model_test),
          rf_error = rf_predict - PCI_2018,
          rf_absError = abs(rf_predict - PCI_2018),
-         rf_APE = (abs(rf_predict - PCI_2018)) / rf_predict) 
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
 
 
 MAE <- mean(EP_model_test$rf_absError, na.rm = T)
@@ -78,7 +78,7 @@ svm_reg1 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 +
                  rb_base + rb_surface +
                  floodzone_highrisk,
                data = EP_model_train, 
-               kernel = "linear", 
+               kernel = "polynomial", 
                cost = 10, 
                scale = FALSE)
 print(svm_reg1)
@@ -90,7 +90,71 @@ EP_model_test <-
   mutate(svm_predict = predict(svm_reg1, EP_model_test),
          svm_error = svm_predict - PCI_2018,
          svm_absError = abs(svm_predict - PCI_2018),
-         svm_APE = abs((svm_predict - PCI_2018)) / svm_predict) 
+         svm_APE = abs((svm_predict - PCI_2018)) / PCI_2018) 
+
+
+MAE <- mean(EP_model_test$svm_absError, na.rm = T)
+MAPE <- mean(EP_model_test$svm_APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+```{r set up svm model 2}
+svm_reg2 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                 car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                 road_age + VMT_pop + dist_hydro + dist_major_int + 
+                 CLASS + land_use_type + 
+                 rb_base + rb_surface +
+                 floodzone_highrisk,
+               data = EP_model_train, 
+               kernel = "radial", 
+               cost = 10, 
+               scale = FALSE)
+print(svm_reg2)
+
+```
+
+```{r prediction with svm model 2}
+EP_model_test <- 
+  EP_model_test %>%
+  mutate(svm_predict = predict(svm_reg2, EP_model_test),
+         svm_error = svm_predict - PCI_2018,
+         svm_absError = abs(svm_predict - PCI_2018),
+         svm_APE = abs((svm_predict - PCI_2018)) / PCI_2018) 
+
+
+MAE <- mean(EP_model_test$svm_absError, na.rm = T)
+MAPE <- mean(EP_model_test$svm_APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+```{r set up svm model 3}
+svm_reg3 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                 car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                 road_age + VMT_pop + dist_hydro + dist_major_int + 
+                 CLASS + land_use_type + 
+                 rb_base + rb_surface +
+                 floodzone_highrisk,
+               data = EP_model_train, 
+               kernel = "sigmoid", 
+               cost = 10, 
+               scale = FALSE)
+print(svm_reg3)
+
+```
+
+```{r prediction with svm model 3}
+EP_model_test <- 
+  EP_model_test %>%
+  mutate(svm_predict = predict(svm_reg3, EP_model_test),
+         svm_error = svm_predict - PCI_2018,
+         svm_absError = abs(svm_predict - PCI_2018),
+         svm_APE = abs((svm_predict - PCI_2018)) / PCI_2018) 
 
 
 MAE <- mean(EP_model_test$svm_absError, na.rm = T)
@@ -103,7 +167,7 @@ kable(acc) %>%
 
 ## XGBoost
 
-```{r }
+```{r select features for xgb}
 xgb_train <-
   EP_model %>% 
   subset(ind == 1) %>%
@@ -135,7 +199,7 @@ xgb_ohe <- as.data.frame(predict(dummies, newdata = xgb_all))
 xgb_combined <- cbind(xgb_all[,-c(which(colnames(xgb_all) %in% ohe_feats))], xgb_ohe)
 ```
 
-```{r}
+```{r split train and test set for xgb}
 xgb_train <- 
   xgb_combined %>%
   subset(ind == 1)
@@ -166,7 +230,7 @@ train_set <- xgb.DMatrix(data = as.matrix(x_train), label = as.matrix(y_train))
 test_set <- xgb.DMatrix(data = as.matrix(x_test), label = as.matrix(y_test))
 ```
 
-```{r}
+```{r train xgb model}
 xgb <- xgboost(data = train_set,
                #booster = 'gbtree', 
                eta = 0.26,
@@ -179,9 +243,10 @@ xgb <- xgboost(data = train_set,
 xgb
 ```
 
-```{r}
+```{r xgb predict and calculate errors}
 pred_xgb <- predict(xgb, as.matrix(x_test))
-mean(abs(pred_xgb - y_test)$PCI_2018) #MAE
+mean(abs(pred_xgb - y_test$PCI_2018)) #MAE
+mean(abs(pred_xgb - y_test$PCI_2018)/y_test$PCI_2018) #MAPE
 ```
 
 ```{r cv for xgb}
