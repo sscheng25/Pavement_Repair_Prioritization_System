@@ -6,13 +6,6 @@ output: html_document
 ---
 # Distribution of Predictors
 
-crash_len16_18 + potholes_len16_18 + 
-car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
-road_age + VMT_pop + dist_hydro + dist_major_int + 
-CLASS + land_use_type + 
-rb_base + rb_surface +
-floodzone_highrisk
-
 ```{r distribution of predictors}
 EP_model <- EPCenterline_2016to2018 %>% na.omit()
 hist(EP_model$crash_len16_18)
