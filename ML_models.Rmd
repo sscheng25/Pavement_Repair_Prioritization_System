@@ -376,6 +376,33 @@ for (j in 1:nrow(hyper_grid)) {
 
 ```
 
+# Results for RF
+
+```{r see prediction result distribution}
+EP_model_test %>%
+ggplot(aes(CLASS, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  labs(title = "Absolute Error vs. Road Class",
+         y="Absolute Error",
+         x="Road Class")  + 
+  plotTheme()
+
+EP_model_test %>%
+ggplot(aes(PCI_2018, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI")  + 
+  plotTheme()
+
+EP_model_test %>%
+ggplot(aes(floodzone_highrisk, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="Floodzone")  + 
+  plotTheme()
+```
 
 
 
