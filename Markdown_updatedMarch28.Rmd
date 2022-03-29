@@ -1,0 +1,1423 @@
+---
+title: "Reimagining Road Repair in El Paso, Texas"
+author: "Sisun Cheng, Kristin Chang, Jenna Epstein"
+date: "2022/3"
+output:
+  html_document:
+    toc: yes
+    toc_float: TRUE
+    code_folding: hide
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE,message = FALSE,cache=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE, results='hide'}
+library(dplyr)
+library(tidyverse)
+library(sf)
+library(lubridate)
+library(tigris)
+library(tidycensus)
+library(ggplot2)
+library(viridis)
+library(riem)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(caret)
+library(purrr)
+library(FNN)
+library(stargazer)
+library(spatstat)
+library(raster)
+library(spdep)
+library(grid)
+library(mapview)
+library(stringr)
+library(ggcorrplot)
+library(scales)
+library(colorspace)
+library(rgdal)          
+library(RColorBrewer) 
+library(rasterVis)    
+library(sp)
+library(ggpubr)
+library(leaflet)
+library(transformr)
+library(jtools)
+
+library(randomForest)
+library(e1071)  # SVM
+library(xgboost)
+library(readr)
+library(car)
+
+palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
+palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
+palette_4 <-c("#08519c","#3bf0c0","#e6a52f","#e76420")
+palette_2 <-c("#e6a52f","#08519c")
+palette_3 <-c("#e6a52f","#08519c", "#e76420")
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.text.x = element_text(size = 14))
+}
+
+plotTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle = element_text(face="italic"),
+    plot.caption = element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line("grey80", size = 0.1),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.background = element_rect(fill = "grey80", color = "white"),
+    strip.text = element_text(size=12),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10),
+    plot.background = element_blank(),
+    legend.background = element_blank(),
+    legend.title = element_text(colour = "black", face = "italic"),
+    legend.text = element_text(colour = "black", face = "italic"),
+    strip.text.x = element_text(size = 14)
+  )
+}
+
+```
+
+```{r import rdata from EDA, message=FALSE, warning=FALSE}
+
+#Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
+
+# RData from EDA part, please make sure to run this properly
+load("Data/EDA.RData")
+
+# OPTIONAL BELOW:
+# modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
+load("Data/modelling_0325.RData")
+```
+
+
+# 1. Project Introduction
+
+The city of El Paso, Texas has been experiencing tremendous growth over the past decade. With growing population comes more pressure - literally - on roads.
+
+There is hope that passage of the Bipartisan Infrastructure Bill in congress will allow for more funding for streets and maintenance projects to help the city's road network become safer and more resilient - but the eventual funding from "Build Back Better" still leaves decision-making process of which local roads to update up to the city.
+
+# 2. Use Case
+
+The City of El Paso's Capital Improvement Department (Planning Division) wishes to improve their system for deciding where to allocate capital improvement funds for roadway projects. Presently, this is done by integrating spatial data sets reflecting current conditions to determine where there is need and opportunity.
+
+There currently is not an established prioritization system when it comes to which roads to improve - or even add to the queue for improvement. PCI scores inform the decision making, but lots of the decisions are ad hoc. For example, constituents raise concerns about certain roads, the department looks at the Pavement Condition Index (PCI) score, and if it is below a certain threshold, then they add it to the list of projects for improvement. This is a very reactive process. They would like it to be more proactive.
+
+But PCI also does not tell the whole story, and the client has expressed interest in exploring other factors that may drive a new prioritization system.
+
+This project is two-pronged:
+
+-   First, we have the **predictive model**. We will predict PCI based on 2018 historical data and lots of feature engineering - which we will discuss shortly. This part of the project is mostly for the exercise of modeling in the academic setting of MUSA801, but the client could always choose to integrate our model outputs of PCI into tools later on.
+
+-   The second part of our project is the **prioritization system**, which will take the form of a we application. We will incorporate PCI (our modeled score or more likely the PCI used by the city) as just one piece of a resource application and prioritization system. We will be exploring factors to drive the new system that include both built and social environmental variables, thus bringing a lens of equity into the project.
+
+# 3. Background Research
+
+## 3.1. Pavement Condition Index (PCI)
+
+A Pavement Condition Index (PCI) measures the quality of a specific road segment. The Capital Improvements Department in El Paso hired a private contractor in 2018 to conduct a digital image scan of the city's roads to evaluate them based on a wide range of conditions. While their exact metrics are proprietary, generally, PCIs are based off of factors such as presence of potholes, bumps, or cracks. The index ranges from a qualitative scale of Failing to Good or quantitatively 0 to 100. We found this chart from an Army Corps of Engineers' study in which they show a significant drop in condition of a road after a certain amount of time. We hope to include the cost savings calculations from this study in the second part of our project, the decision-making tool. This would be a strong advocacy tool for improving a road as well as a strong planning tool by considering the road's lifetime. For now, this made us curious about the construction of roads and if there are any earlier stage indicators that could show signs of weakening conditions.
+
+
+```{r echo=TRUE}
+knitr::include_graphics("C:/Users/jenna/Documents/MCP/Spring_2022/MUSA801_Practicum/Pavement_Repair_Prioritization_System/Images/PCI-plot-white.jpg")
+```
+
+
+## 3.2. Road Anatomy
+
+To better inform our model, we want to understand the different parts of a road and what factors may lead to worsening conditions over time. We identified three main features to pay attention to: the earth foundation, the roadbed base, and the surface. 
+
+```{r echo=TRUE}
+knitr::include_graphics("C:/Users/jenna/Documents/MCP/Spring_2022/MUSA801_Practicum/Pavement_Repair_Prioritization_System/Images/road_cross_section.png")
+
+```
+
+
+The surface as an important feature is more obvious as potholes, bumps, and cracks are noticeable to the everyday road user. However, there are roads that have no base layer, weak materials, or are built in areas prone to flooding that can weaken the road's structure as it ages. These are all important aspects of a road's anatomy that we explored in the exploratory data analysis phase and their relationship to PCI.
+
+
+# 4. Exploratory Data Analysis
+
+## 4.1 Importing Local Data
+
+To begin, we import various data layers from local sources, and the datasets include:
+
+-   **CIP_layer**: Centerlines included in the Capital Improvement Program
+-   **centerline_with_age**: Centerlines in El Paso with the year of resurfacing and PCI values
+-   **EPCenterline**: Centerlines in El Paso with properties like CLASS
+-   **zoning**: El Paso city zoning
+-   **potholes**: Potholes data in El Paso
+-   **waze_data**: Waze traffic jam data in El Paso
+-   **VMT**: Vehicle miles traveled per census blockgroup in El Paso
+-   **crash18**: Crash data in El Paso in 2018
+-   **roadbed_base**: Roadbed base properties of street segments
+-   **roadbed_surface**: Roadbed surface properties of street segments
+-   **tl_roads**: TIGER/Line shapefile with road properties in El Paso
+-   **EPcity_landcover**: Landcover raster data of El Paso
+-   **floodzones**: FEMA flood zone designations data of El Paso
+
+These datasets are the basis for the future data wrangling, feature engineering, and exploratory analysis process.
+
+## 4.2 Selected Feature Summary
+
+We wrangled data and settled on a collection of features, shown in the table below.
+
+Feature | Source
+------------- | -------------
+Road Class | City of El Paso
+Land Use | City of El Paso
+Potholes | City of El Paso
+Crashes | City of El Paso
+Traffic Jams | Waze, via City of El Paso
+Vehicle Miles Traveled (VMT) | Replica, via City of El Paso
+Amenities | OpenStreetMap
+Roadbed Base | TxDOT
+Roadbed Width | TxDOT
+Roadbed Surface | TxDOT
+High Flood Risk | *Engineered* from FEMA 2020 Preliminary Flood Zones
+Distance to Major Intersection | *Engineered* from Centerlines
+Distance to Hydrology | *Engineered* from  National Hydrology Dataset
+311 Maintenance Requests | City of El Paso
+
+## 4.2  Census Data
+
+### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
+
+To get a better sense of the population that the roads are servicing, we take a look at the residents' race, ethnicity, and age group through the ACS 5-year dataset.
+
+Taking a look at the population pyramid, we can tell the age structure of El Paso city tend to be young, and the working age population accounts for a large proportion of the total population, which means there is a high everyday commute demand in our study area.
+
+```{r plot the poplation pyramid, message=FALSE, warning=FALSE}
+ggplot(pop_pyramid, aes(x = variable, fill = Sex,
+                 y = ifelse(test = Sex == "Male",
+                            yes = -value, no = value))) + 
+  geom_bar(stat = "identity") +
+  # geom_line(aes(x = "15 to 19 years"), color = "red", size=1) +
+  scale_y_continuous(labels = abs, limits = max(pop_pyramid$value) * c(-1,1)) +
+  scale_fill_manual(values=palette_2)+
+  labs(title = "Population Pyramid", x = "Age Group", y = "Population by Gender") +
+  coord_flip() + plotTheme()
+```
+
+The diverse distribution of race and ethnicity can assist us in the future cross validation process and serve as a reference on equity control.
+
+```{r census_demo_maps, message=FALSE, warning=FALSE}
+#plotting census demographics data
+#race map
+
+race_long <- EP_race%>%
+  dplyr::select(GEOID,NAME, pctWhite, pctBlack, pctNAT, pctAsian, pctPI, pctOther, pctTwo_plus)%>%
+  gather(variable, value, -geometry, -GEOID, -NAME)
+
+race_vars <- unique(race_long$variable)
+mapList <- list()
+
+for(i in race_vars){
+  mapList[[i]] <-
+    ggplot() +
+      geom_sf(data = filter(race_long, variable == i), aes(fill=value), colour=NA) +
+      scale_fill_viridis(option='G',name="") +
+      labs(title=i) +
+      mapTheme()}
+
+do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract"))
+
+
+```
+
+
+```{r census_demo_maps2, fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+#ethnicity map - Hispanic or Latino
+ggplot()+
+  geom_sf(data=EP_ethnicity, aes(fill=pctHL), color="grey")+
+  scale_fill_viridis(option='G', direction=-1)+
+  labs(title="Percent Hispanic or Latino in 2019",
+       fill="% Hispanic \nor Latino",
+       subtitle="Census Tracts in El Paso, TX",
+       caption = "Source: US Census, ACS 2019") + mapTheme()
+
+```
+
+### 4.2.2 El Paso Socioeconomics (data from 2019 5yr ACS)
+
+We also get some socioeconomic factors from ACS datasets.
+
+Median household income also has an impact on the local infrastructure construction and repairment. Furthermore, it's a good way to examine the equity of resource allocation by check the difference between high- and low-income tracts.
+
+```{r census_socioecon_hhincome_map, fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+#Median household income
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=med_hh_income), color="grey")+
+  scale_fill_viridis(option='G', direction=-1)+
+  labs(title="Median Household Income in 2019",
+       fill="Dollars ($)",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019\n\nNote: Gray tracts indicate no data") + mapTheme()
+```
+
+Median rent can reflect the state of the community's infrastructure to some extent and pavement condition is an important part of the local infrastructure. Thus, we assume that the median rent can somewhat reveal the local pavement conditions and serve as a reference for our decision making process.
+
+```{r census_socioecon_medianrent_map, fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+#Median rent
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=med_rent), color="grey")+
+  scale_fill_viridis(option='G', direction= -1)+
+  labs(title="Median Rent in 2019",
+       fill="Dollars ($)",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019n\nNote: Gray tracts indicate no data") + mapTheme()
+```
+
+The percentage of local population who takes public transit to work has a lower level of usage on the pavements nearby. By looking at this feature, we can get a basic sense of the local public transportation utilization.
+
+```{r census_socioecon_transport_map, fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+#pct transport to work map
+ggplot()+
+  geom_sf(data=EP_econ, aes(fill=pct_transport_to_work), color="grey")+
+  scale_fill_viridis(option='G', direction=-1)+
+  labs(title="Percent Population with Transportation to Work in 2019",
+       fill="% Transport to Work",
+       subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019") + mapTheme()
+```
+
+### 4.2.3 El Paso Hydrology (US Census - TIGER/Line Shapefiles)
+
+At this point we also import the hydrology features from the US Census. We can see from the map below that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
+
+```{r visualize hydrology, fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EPhydrology, color = 'blue', alpha = 0.5, show.legend = T)+ 
+  labs(title="Hydrology Across the City",
+       subtitle="El Paso, TX", caption="Source: US Census - TIGER/Line Shapefiles") + mapTheme()
+
+```
+
+
+## 4.3 Data Wrangling and Feature Engineering
+
+### 4.3.1 Outcome Variable: PCI
+
+#### Centerline and PCI Exploration
+
+In this part, we start diving deeper into the existing base dataset. To begin with, we apply data cleaning and wrangling on `EPCenterline` data layer. First, we get rid of some unneeded columns to keep the data frame tidy and readable. We also clip the data layer to the city level to focus more on our study area.
+
+Then we remove some duplicated "LOCAL" classes and combine similar road classes together to reduce class numbers. After talking to our client, we only keep four pavement categories - LOCAL, MINOR, MAJOR, and COLLECTOR - and most of the existing pavement segments belong to LOCAL category.
+
+
+```{r EP centerlines ggplots, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = EPCenterline, aes(color = CLASS), alpha=0.6, size=0.95, show.legend = "line") +
+  scale_color_manual(values=palette_4)+
+  labs(title = "Road Centerlines by Class",
+       fill="Class",
+       subtitle = "El Paso, TX") + mapTheme()
+
+#ggplot(EPCenterline, aes(y=CLASS)) +
+#  geom_bar(width=0.5, color="black", fill = "#08519c") +
+#  labs(title = "Pavement Centerline Counts by Class",
+#       x="Count",
+#       y="Class",
+#       subtitle = "El Paso, TX") + plotTheme()
+
+```
+
+We prepare road centerline data with PCI values from 2018 and the latest resurfacing year by joining `EPCenterline` to `centerline_with_age`. We add a column of index for each pavement segment at this stage for any future joins and spatial joins. Since we select pavement segments as one of our spatial units, we calculate the length of each segment as a feature for future application.
+
+Here we focus on fundamental visualizations on the features of `EPCenterline_with_PCI`. As is shown in the plots below, LOCAL and COLLECTOR segments have higher average PCI values, while segments in MAJOR class tend to have more problems in pavement condition. When it comes to different planning areas, segments in Northwest El Paso and the Art Craft region have better pavement conditions, while the central region performs poorly.
+
+```{r explore centerline data with PCI values from 2018 with visuals, message=FALSE, warning=FALSE}
+
+ggplot(EPCenterline_with_PCI, aes(y=CLASS)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Road Centerlines by Class",
+       y="Class",
+       x="Count",
+       subtitle = "El Paso, TX") + plotTheme()
+
+#ggplot(EPCenterline_with_PCI, aes(y=STATUS)) +
+#  geom_bar(width=0.5, color="black", fill = "#08519c") +
+#  labs(title = "Road Centerlines by Status",
+#       y="Pavement Status",
+#       x="Count",
+#       subtitle = "El Paso, TX") + plotTheme()
+
+```
+
+We plot the histogram of the PCI distribution here, and we can detect some negative PCI values from the plot. After discussion with our client, we decide to remove these negative PCIs because these street segments are highways, interstates, private roads, etc., which are out of our project scope. After getting rid of the negative PCIs, we get a new PCI distribution which shows three peaks in numbers at the value of 98-100, 80-85, and 58-63 respectively.
+
+```{r centerline with pci, message=FALSE, warning=FALSE}
+# glimpse(centerline_with_age)
+
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
+  geom_sf(data = EPCenterline_with_PCI, aes(color = PCI_2018)) +
+  scale_color_viridis(option='G', direction=-1)+
+  labs(title = "Centerlines with PCI Value in 2018",
+       subtitle = "El Paso, TX") + mapTheme()
+
+# unique(center_line$PCI_2018)
+ggplot(EPCenterline_with_PCI, aes(y=PCI_2018), color="grey") +
+  geom_bar(width=0.5, color="transparent", fill = "#08519c") +
+  labs(title = "PCI 2018 Distribution",
+       x="Count",
+       y="PCI",
+       subtitle = "El Paso, TX") + plotTheme()
+
+ggplot()+
+  geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
+  geom_sf(data = EPCenterline_with_PCI, aes(color = PCI_2018)) +
+  scale_color_viridis(option='G', direction=-1)+
+  labs(title = "Road Centerlines with PCI Value in 2018",
+       caption= "Note: Centerlines with negatives now excluded from this dataset",
+       color="PCI",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+### 4.3.2 Waze Jams
+
+To get the X and Y coordinates for waze traffic jam data, we apply some string extraction on the raw `waze_data` dataset and build up a spatial data frame.
+
+As is shown in the histogram below, most of the traffic jams collected in the Waze jams dataset are heavy and moderate traffic jams, with a few NAs and very few categorized as light traffic. This is probably because people do not tend to report light traffic to the Waze application. The map of Waze data points below reveals that most of the congestion occurs along the main roads in the city. 
+
+Note: We elected to remove the NA subtype from the Waze jams data going forward since we are interested in the jam traffic report subtypes only.
+
+```{r message=FALSE, warning=FALSE}
+ggplot(waze_sf, aes(y=Subtype)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Waze Jams Count by Subtype",
+       x="Count",
+       y="Jam Subtype",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+
+### 4.3.3 Potholes
+
+To deal with the potholes data, we first assign spatial coordinates to the data points with our CRS and drop some NA rows. Then we filter out some incorrectly recorded data and group the potholes data by year. We make the map of the pothole data points of 2016-2018 and 2019-2021 below, and plot the distribution of pothole numbers by year.
+
+```{r lots of potholes maps, message=FALSE, warning=FALSE}
+# 2016-2018 map
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="grey") +
+  geom_sf(data = potholes_sf_2016to2018, aes(colour=YEAR), size=0.5, show.legend = "point") +
+  scale_color_manual(values=palette_5blues) +
+  labs(title = "Potholes in 2016-2018",
+       subtitle = "El Paso, TX") + mapTheme()
+
+#  2019-2021 map
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="grey") +
+  geom_sf(data = potholes_sf_2019to2021, aes(colour=YEAR), size=0.5, show.legend = "point") +
+  scale_color_manual(values=palette_5blues) +
+  labs(title = "Potholes in 2019-2021",
+       subtitle = "El Paso, TX") + mapTheme()
+
+ggplot(potholes_sf, aes(y=YEAR)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Year of pot holes repairment",
+       subtitle = "El Paso, TX") + plotTheme()
+
+```
+
+
+### 4.3.4 Land Cover & Land Use
+
+Direct and surrounding land cover and land use types can influence road conditions. Most of the roads fall within heavily developed areas and are single family land use. These characteristics indicate that there could be high volume of traffic as people travel from residential to commercial areas, which ultimately increases the wear and tear of roads over time.
+
+
+```{r map the final land cover raster with all groups, message=FALSE, warning=FALSE}
+ggplot(data = EPcity_landcover_df) +
+  geom_raster(aes(x = x, y = y, fill = as.character(value))) + 
+  scale_fill_manual(name = "Land Cover",
+                    values = LCcolors,
+                    labels = LCnames[-2],
+                    na.translate = FALSE) +
+  coord_sf(expand = F) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.background = element_rect(fill = "white", color = "black")) + 
+  labs(title = "Land Cover in 2018",
+       caption = "Source: National Land Cover Database",
+       subtitle = "El Paso,TX") +
+  mapTheme()
+
+```
+
+
+Again we can see that there is majority developed area across the city, with a focus particularly on single-family residential.
+
+```{r land use ggplots, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = land_use_majority_sf, aes(fill = land_use_type), color="grey") +
+  scale_fill_viridis_d(option="mako", direction=-1) +
+                     labs(title = "Land Use by Census Tract",
+       fill= "Land Use Type \n(Majority)",
+        caption="Source: City of El Paso, TX",
+       subtitle = "El Paso, TX") +
+  mapTheme()
+
+ggplot(land_use_majority_sf, aes(y=land_use_type)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Land Use by Census Tract",
+       y="Land Use Type",
+       x="Count of Tracts",
+       subtitle = "El Paso, TX",
+       caption="Source: City of El Paso, TX") +
+  plotTheme()
+
+```
+
+
+### 4.3.5 OpenStreetMap Amenities
+We gather features marked as "amenity" from OpenStreetMap. 
+
+```{r load amentiy data from outside source, message=FALSE, warning=FALSE}
+amenity <- read.csv("Data/OSM_amenities/OSM_amenity.csv")
+
+amenity_sf <- 
+  amenity %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102339')
+```
+
+
+```{r plot the amenities, message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = El_Paso_city, color = "grey") +
+  geom_sf(data = amenity_sf, aes(color = amenity), size=0.5, show.legend = "point") +
+  labs(title = "OpenStreetMap Amenities",
+       subtitle = "El Paso, TX")+
+  mapTheme()
+
+ggplot(amenity_sf, aes(y=amenity)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Amenities by Type",
+       x="Count",
+       y="Type",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+```{r divide amenities to different categories, message=FALSE, warning=FALSE}
+food_drink <- c('restaurant', 'fast_food', 'cafe', 'bar', 'ice_cream', 'pub')
+entertainment <- c('arts_centre', 'cinema', 'theatre')
+car_facility <- c('fuel', 'car_rental', 'car_wash', 'parking', 'parking_space')
+
+am_food_drink <- amenity_sf %>%
+  filter(amenity %in% food_drink)
+am_entertainment <- amenity_sf %>%
+  filter(amenity %in% entertainment)
+am_car_facility <- amenity_sf %>%
+  filter(amenity %in% car_facility)
+
+
+# KNN function, join amenities
+st_c <- st_coordinates
+EPCenterline_new6 <-
+  EPCenterline_new5 %>%
+  mutate(
+      food_drink_nn3 = nn_function(na.omit(st_c(st_centroid(EPCenterline_new5))),na.omit(st_c(am_food_drink)), 3),
+      entertainment_nn3 = nn_function(na.omit(st_c(st_centroid(EPCenterline_new5))),na.omit(st_c(am_entertainment)), 3),
+      car_facility_nn3 = nn_function(na.omit(st_c(st_centroid(EPCenterline_new5))),na.omit(st_c(am_car_facility)), 3),
+  )
+
+```
+
+
+### 4.3.6 High Risk Flood Zones
+
+We obtained the new preliminary FEMA flood zone maps from the City of El Paso.
+
+```{r bring in the 2020 preliminary flood zone data and clip, message=FALSE, warning=FALSE}
+prelim_floodzones_2020 <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp" )%>%
+  st_transform('ESRI:102339')
+
+# clip flood zones to city bounds
+EPcity_prelim_floodzones_2020 <- st_intersection(prelim_floodzones_2020, El_Paso_city)
+
+EPcity_prelim_floodzones_2020 <- EPcity_prelim_floodzones_2020 %>% dplyr::filter(EPcity_prelim_floodzones_2020$STUDY_TYP == "SFHAs WITH HIGH FLOOD RISK")
+
+```
+
+
+```{r visualize flood zones, message=FALSE, warning=FALSE}
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EPcity_prelim_floodzones_2020, aes(fill=STUDY_TYP), color="transparent", fill="#3FB0C0")+
+  #scale_fill_viridis_d(direction=-1, option='G')+
+  labs(title="Preliminary Flood Zone 2020: Area of High Flood Risk",
+       fill= "",
+       subtitle="El Paso, TX", caption="Source: City of El Paso; FEMA") + mapTheme()
+
+```
+
+```{r flood zones by high risk, message=FALSE, warning=FALSE}
+EPCenterline_new6 <- EPCenterline_new6 %>% mutate(n_floodzone_int = lengths(st_intersects(EPCenterline_new6, EPcity_prelim_floodzones_2020)))
+
+# adding a column for yes or no for if intersected a flood zone area at all or not
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(floodzone_highrisk = ifelse(EPCenterline_new6$n_floodzone_int > 0, "Yes", "No"))
+```
+
+
+### 4.3.7 Crashes
+
+```{r udpated crash data according to year, message=FALSE, warning=FALSE}
+#read in new data
+crash16 <- st_read("Data/CRIS2016/CRIS2016.shp")
+crash17<- st_read("Data/CRIS2017/CRIS2017.shp")
+crash19<- st_read("Data/CRIS2019/CRIS2019.shp")
+crash20<- st_read("Data/CRIS2020/CRIS2020.shp")
+crash21<- st_read("Data/CRIS2021/CRIS2021.shp")
+
+#combine past years
+crash16_18 <- rbind(crash16, crash17, crash18)
+crash19_21 <- rbind(crash19, crash20, crash21)
+
+#replace 0s in lat long columns with NA so we can omit
+crash16_18trim<-crash16_18[!(crash16_18$Latitude==0 | crash16_18$Longitude==0),]
+crash19_21trim<-crash19_21[!(crash19_21$Latitude==0 | crash19_21$Longitude==0),]
+
+#transforming to our crs
+crash16_18sf <- crash16_18trim %>%
+  na.omit() %>%
+  st_as_sf(coords = c("Latitude", "Longitude"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+crash19_21sf <- crash19_21trim %>%
+  na.omit() %>%
+  st_as_sf(coords = c("Latitude", "Longitude"),
+           crs = 'epsg:2277',
+           agr = "constant") %>%
+  st_transform('ESRI:102339')
+```
+
+```{r join crash data to EPcenterline, message=FALSE, warning=FALSE}
+#join crashes to EPCenterline using nearest feature 
+crash_centerlines16_18 <-  st_join(crash16_18sf, EPCenterline_buffer, join = st_nearest_feature)
+crash_centerlines19_21 <-  st_join(crash19_21sf, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+crash_centerlines_clean16_18 <- crash_centerlines16_18 %>%
+  dplyr::select(Crash_ID, index) %>% st_drop_geometry()
+
+crash_centerlines_clean19_21 <- crash_centerlines19_21 %>%
+  dplyr::select(Crash_ID, index) %>% st_drop_geometry()
+
+#drop old columns
+EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(crash_count,crash_len))
+
+# count crashes per street segment
+crash_groupings16_18 <- crash_centerlines_clean16_18 %>%
+  group_by(index) %>%
+  summarize(crash_count16_18=n())
+
+crash_groupings19_21 <- crash_centerlines_clean19_21 %>%
+group_by(index) %>%
+summarize(crash_count19_21=n())
+
+# for 2016-2018...
+
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, crash_groupings16_18, by = "index", all.x=TRUE)
+
+# replace NAs in crash count column with 0
+EPCenterline_new6$crash_count16_18[is.na(EPCenterline_new6$crash_count16_18)] <- 0
+
+# calculate crashes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(crash_len16_18 = crash_count16_18*100/pave_length)
+
+# convert to numeric
+EPCenterline_new6$crash_len16_18 <- as.numeric(as.character(EPCenterline_new6$crash_len16_18))
+
+# then again for 2019-2021...
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, crash_groupings19_21, by = "index", all.x=TRUE)
+
+# replace NAs in crash count column with 0
+EPCenterline_new6$crash_count19_21[is.na(EPCenterline_new6$crash_count19_21)] <- 0
+
+# calculate crashes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(crash_len19_21 = crash_count19_21*100/pave_length)
+
+# convert to crash_len19_21
+EPCenterline_new6$crash_len19_21 <- as.numeric(as.character(EPCenterline_new6$crash_len19_21))
+```
+
+### 4.3.8 Roadbed Features
+
+Add new plots.
+
+```{r update potholes feature}
+## Potholes Update
+#Creating new columns for potholes counts and lengths for the two different year groupings.
+
+#drop old columns
+EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(potholes_count,potholes_len))
+
+#clean up potholes grouping dfs
+potholes_sf_2016to2018 <- subset(potholes_sf_2016to2018, select= c(YEAR, geometry, WORKORDERID))
+potholes_sf_2019to2021 <- subset(potholes_sf_2019to2021, select= c(YEAR, geometry, WORKORDERID))
+
+# join potholes to df
+
+#join potholes to EPCenterline using nearest feature 
+potholes_centerlines_2016to2018 <-  st_join(potholes_sf_2016to2018, EPCenterline_buffer, join = st_nearest_feature)
+potholes_centerlines_2019to2021 <-  st_join(potholes_sf_2019to2021, EPCenterline_buffer, join = st_nearest_feature)
+
+#clean up to make it easier
+potholes_centerlines_clean_2016to2018 <- potholes_centerlines_2016to2018 %>%
+  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
+
+potholes_centerlines_clean_2019to2021 <- potholes_centerlines_2019to2021 %>%
+  dplyr::select(WORKORDERID, index) %>% st_drop_geometry()
+
+# count potholes per street segment
+potholes_groupings_2016to2018 <- potholes_centerlines_clean_2016to2018 %>%
+  group_by(index) %>%
+  summarize(potholes_count16_18=n())
+
+potholes_groupings_2019to2021 <- potholes_centerlines_clean_2019to2021 %>%
+group_by(index) %>%
+summarize(potholes_count19_21=n())
+
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, potholes_groupings_2016to2018, by = "index", all.x=TRUE)
+
+# replace NAs in potholes count column with 0
+EPCenterline_new6$potholes_count16_18[is.na(EPCenterline_new6$potholes_count16_18)] <- 0
+
+# calculate potholes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(potholes_len16_18 = potholes_count16_18*100/pave_length)
+
+# convert to numeric
+EPCenterline_new6$potholes_len16_18 <- as.numeric(as.character(EPCenterline_new6$potholes_len16_18))
+
+# for 2019-2021...
+
+# then join back to initial EPCenterline using index as the ID
+EPCenterline_new6 <- merge(EPCenterline_new6, potholes_groupings_2019to2021, by = "index", all.x=TRUE)
+
+# replace NAs in potholes count column with 0
+EPCenterline_new6$potholes_count19_21[is.na(EPCenterline_new6$potholes_count19_21)] <- 0
+
+# calculate potholes per 100 meters
+EPCenterline_new6 <-
+  EPCenterline_new6 %>%
+  mutate(potholes_len19_21 = potholes_count19_21*100/pave_length)
+
+# convert to numeric
+EPCenterline_new6$potholes_len19_21 <- as.numeric(as.character(EPCenterline_new6$potholes_len19_21))
+```
+
+
+## 4.4 Variable Relationships
+
+We split data according to year groupings before running some correlations analyses to understand relationships between PCI and our features.
+
+```{r EPCenterline data splits}
+# 2016-2018
+EPCenterline_2016to2018<- subset(EPCenterline_new6, select= -c(crash_count19_21, crash_len19_21, potholes_count19_21,potholes_len19_21))
+
+# 2019-2021
+EPCenterline_2019to2021 <- subset(EPCenterline_new6, select= -c(crash_count16_18, crash_len16_18, potholes_count16_18,potholes_len16_18, PCI_2018))
+
+```
+
+
+### 4.4.1 Numeric Variable Correlations for 2016-2018 Grouping
+
+```{r Numeric Correlations with PCI, warning=FALSE}
+numVars_PCI <-
+  EPCenterline_2016to2018 %>%
+  dplyr::select(VMT_pop, PCI_2018,
+    road_age, potholes_count16_18, crash_count16_18,
+    #crash_len16_18, #potholes_len16_18, waze_len
+    dist_hydro, dist_major_int) %>%
+  st_drop_geometry() %>%
+  na.omit()
+
+numVars_PCI %>% 
+  gather(Variable, Value, -PCI_2018) %>% 
+  ggplot(aes(Value, PCI_2018)) +
+  geom_point(size = 0.5, color = "grey") + 
+  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
+     facet_wrap(~Variable, ncol = 3, scales = "free") +
+     labs(title = "Numeric Variables vs. PCI",
+          subtitle = "El Paso, TX") + 
+  stat_cor(aes(label = ..r.label..), label.x = 0) +
+  plotTheme()
+```
+
+### 4.4.2 Categorical Correlations with PCI
+
+We also examine the correlations of PCI values and some categorical variables.
+
+#### Road Class and PCI
+
+When it comes to the road class of pavement segments in the EPCenterline dataset, there is no obvious difference between different road classes. Thus, road class might not be a useful variable in our model.
+
+```{r class pci correlation, message=FALSE, warning=FALSE}
+
+class_PCI<- EPCenterline_2016to2018[c('index','CLASS','PCI_2018')]
+
+class_PCI %>%
+ggplot(aes(CLASS, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+    labs(title = "Road Class vs. PCI",
+         y="PCI Score in 2018",
+         x="Road Class",
+         subtitle = "Dataset: EPCenterline")  + plotTheme()
+```
+
+
+#### Roadbed Base Material and PCI
+
+For the roadbed base material feature come from TXDOT roadbed data layer, we can tell that pavements with no base layer have the highest average PCI and those with asphalt stabilized base and stabilized open-graded permeable pavement have lower PCI values.
+
+```{r roadbed base pci correlation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+roadbed_base_PCI<- EPCenterline_2016to2018[c('index','rb_base','PCI_2018')]
+
+roadbed_base_PCI %>%
+ggplot(aes(rb_base, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+    labs(title = "Roadbed Base Material vs. PCI",
+         y="PCI Score in 2018",
+         x="Roadbed Base Material",
+         subtitle = "Dataset: TXDOT Roadbed_Base") +
+   scale_x_discrete(labels = wrap_format(10)) + 
+  plotTheme()
+```
+
+
+#### Roadbed Surface Material and PCI
+
+For the roadbed surface material feature, pavement segments with joined reinforced concrete surface have the highest average PCI, while those with continuously reinforced concrete surface, medium thickness asphaltic concrete surface have lower average PCI values.
+
+```{r roadbed surface pci correlation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+roadbed_surface_PCI<- EPCenterline_2016to2018[c('index','rb_surface','PCI_2018')]
+
+roadbed_surface_PCI %>%
+ggplot(aes(rb_surface, PCI_2018)) +
+    geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+    labs(title = "Roadbed Surface Material vs. PCI",
+         y="PCI Score in 2018",
+         x="Roadbed Surface Material",
+         subtitle = "Dataset: TXDOT Roadbed_Surface") +
+   scale_x_discrete(labels = wrap_format(19)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+    plotTheme()
+```
+
+#### Land Use and PCI
+
+Looking into the relationship between land use types and PCI value, we find that pavement segments near open space, transportation, and other land use types have higher PCIs, with an average over 75. Meanwhile, segments near multi-family houses, non-retail attractions have lower average PCIs.
+
+```{r land use pci correlation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+land_use_with_PCI<- EPCenterline_2016to2018[c('index','land_use_type','PCI_2018')]%>%
+  na.omit()
+
+land_use_with_PCI$land_use_type = stringr::str_replace_all(land_use_with_PCI$land_use_type, "_", " ")
+
+land_use_with_PCI %>%
+ggplot(aes(land_use_type, PCI_2018)) +
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+    labs(title = "Land Use vs. PCI",
+         y="PCI Score in 2018",
+         x="Land Use Type",
+         subtitle = "Dataset: El Paso Land Use") +
+  scale_x_discrete(labels = wrap_format(12)) + 
+   plotTheme()
+```
+### 4.4.3 Variable Transformations
+Looking at the variable distributions, we decided to explore some transformations.
+
+```{r distribution of predictors, message=FALSE, warning=FALSE}
+EP_model <- EPCenterline_2016to2018 %>% na.omit()
+hist(EP_model$crash_len16_18)
+hist(EP_model$potholes_len16_18)
+
+hist(EP_model$car_facility_nn3)
+hist(EP_model$entertainment_nn3)
+hist(EP_model$food_drink_nn3)
+
+hist(EP_model$road_age)
+hist(EP_model$VMT_pop)
+hist(EP_model$dist_hydro)
+hist(EP_model$dist_major_int)
+```
+
+```{r log transformation, message=FALSE, warning=FALSE}
+EP_model$crash_len16_18 <- log(EP_model$crash_len16_18 + 2)
+hist(EP_model$crash_len16_18)
+EP_model$potholes_len16_18 <- log(EP_model$potholes_len16_18 + 2)
+hist(EP_model$potholes_len16_18)
+
+EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
+hist(EP_model$dist_hydro)
+
+```
+
+
+# 5. Modeling
+
+## 5.1 Split to train and test set
+
+```{r split the data to train and test set, message=FALSE, warning=FALSE, results='hide'}
+set.seed(111)
+# EP_model <- EP_model %>% na.omit()
+
+EP_model$ind <- sample(2, nrow(EP_model), replace = TRUE, prob=c(0.8, 0.2))
+
+EP_model_train <-
+  EP_model %>% 
+  subset(ind == 1) 
+
+EP_model_test <-
+  EP_model %>% 
+  subset(ind == 2) 
+
+```
+
+
+## 6.2 OLS Regression
+
+```{r start with linear regression, message=FALSE, warning=FALSE, results='hide'}
+OLS_reg1 <- 
+  lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
+       car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+       road_age + VMT_pop + dist_hydro + dist_major_int + 
+       # med_hh_income + pct_transport_to_work + pctWhite + 
+       CLASS + land_use_type + floodzone_highrisk,
+     data = EP_model_train)
+
+stargazer(OLS_reg1, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
+summary(OLS_reg1)
+
+EP_model_OLS <-
+  EP_model_test %>%
+  mutate(PCI.Predict = predict(OLS_reg1, EP_model_test),
+         PCI.Error = PCI.Predict - PCI_2018,
+         PCI.AbsError = abs(PCI.Predict - PCI_2018),
+         PCI.APE = (abs(PCI.Predict - PCI_2018)) / PCI_2018) 
+
+MAE <- mean(EP_model_OLS$PCI.AbsError, na.rm = T)
+MAPE <- mean(EP_model_OLS$PCI.APE, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+ols_acc_table <- kable(acc) %>% 
+  kable_styling(full_width = F)
+
+
+
+```
+
+```{r}
+ols_acc_table 
+
+```
+
+
+```{r k-fold cross validation for OLS model, message=FALSE, warning=FALSE, results='hide'}
+
+fitControl <- trainControl(method = "cv", number = 100)
+set.seed(825)
+
+OLS_reg1.cv <- 
+  train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
+         car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+         road_age + VMT_pop + dist_hydro + dist_major_int + 
+         # med_hh_income + pct_transport_to_work + pctWhite + 
+         CLASS + land_use_type,
+       data = EP_model_train,
+        method = "lm", trControl = fitControl, na.action = na.pass)
+
+OLS_reg1.cv
+OLS_reg1.cv$resample[1:10,]
+```
+
+
+## 6.3 Poisson Regression
+
+```{r try poisson regression, message=FALSE, warning=FALSE, results='hide'}
+poisson_reg1 <- glm(formula = 
+                      PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
+                       car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+                       road_age + VMT_pop + dist_hydro + dist_major_int + 
+                       # med_hh_income + pct_transport_to_work + pctWhite + 
+                       CLASS + land_use_type, 
+                    data = EP_model_train, 
+                    family = poisson)
+stargazer(poisson_reg1, type = "text",title = "Poisson Regression Results", align=TRUE, no.space=TRUE)
+
+EP_model_poisson <-
+  EP_model_test %>%
+  mutate(PCI.Predict = predict(poisson_reg1, EP_model_test),
+         PCI.Error = PCI.Predict - PCI_2018,
+         PCI.AbsError = abs(PCI.Predict - PCI_2018),
+         PCI.APE = (abs(PCI.Predict - PCI_2018)) / PCI_2018) 
+
+poisson_MAE <- mean(EP_model_poisson$PCI.AbsError, na.rm = T)
+poisson_MAPE <- mean(EP_model_poisson$PCI.APE, na.rm = T)
+poisson_acc <- data.frame(poisson_MAE, poisson_MAPE)
+poisson_acc_table <- kable(poisson_acc) %>% 
+  kable_styling(full_width = F)
+
+poisson_acc_table
+
+```
+
+
+## 6.4 Random Forest
+
+### 6.4.1 Random Forest Model 1
+
+```{r set up rf model1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+rf_model1 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=15,
+                         bootstrap=T)
+
+rf_model1
+importance(rf_model1)
+
+```
+
+```{r rfmodel1importance, echo=FALSE}
+importance(rf_model1)
+```
+
+### 6.4.1 Random Forest Model 2
+
+```{r set up rf model2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+rf_model2 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=15,
+                         bootstrap=F)
+
+```
+
+
+
+```{r rfmodel2importance, echo=FALSE}
+rf_model2
+importance(rf_model2)
+```
+
+```{r prediction with rf model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_rf1 <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_model1, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+```
+
+```{r}
+
+rf1_preds_MAE <- mean(EP_model_rf1$rf_absError, na.rm = T)
+rf1_preds_MAPE <- mean(EP_model_rf1$rf_APE, na.rm = T)
+rf1_preds_acc <- data.frame(rf1_preds_MAE, rf1_preds_MAPE)
+rf1_preds_acc_table <- kable(rf1_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf1_preds_acc_table
+```
+
+```{r prediction with rf model 2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_rf2 <- 
+  EP_model_test %>%
+  mutate(rf_predict2 = predict(rf_model2, EP_model_test),
+         rf_error2 = rf_predict2 - PCI_2018,
+         rf_absError2 = abs(rf_predict2 - PCI_2018),
+         rf_APE2 = (abs(rf_predict2 - PCI_2018)) / PCI_2018) 
+
+```
+
+```{r}
+rf2_preds_MAE <- mean(EP_model_rf2$rf_absError2, na.rm = T)
+rf2_preds_MAPE <- mean(EP_model_rf2$rf_APE2, na.rm = T)
+rf2_preds_acc <- data.frame(rf2_preds_MAE, rf2_preds_MAPE)
+rf2_preds_acc_table <- kable(rf2_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf2_preds_acc_table
+```
+
+```{r grid search mtry for RF model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+set.seed(111)
+tunegrid <- expand.grid(.mtry=c(1, 5, 10, 15))
+rf_gridsearch <- train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                       data = EP_model_train, 
+                       method="rf", 
+                       tuneGrid=tunegrid, 
+                       trControl=control)
+
+print(rf_gridsearch)
+plot(rf_gridsearch)
+
+```
+
+## 6.5 SVM
+
+```{r set up svm model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+svm_reg1 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                 car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                 road_age + VMT_pop + dist_hydro + dist_major_int + 
+                 CLASS + land_use_type + 
+                 rb_base + rb_surface +
+                 floodzone_highrisk,
+               data = EP_model_train, 
+               kernel = "polynomial", 
+               cost = 10, 
+               scale = FALSE)
+
+print(svm_reg1)
+```
+
+
+```{r prediction with svm model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_svm1 <- 
+  EP_model_test %>%
+  mutate(svm_predict = predict(svm_reg1, EP_model_test),
+         svm_error = svm_predict - PCI_2018,
+         svm_absError = abs(svm_predict - PCI_2018),
+         svm_APE = abs((svm_predict - PCI_2018)) / PCI_2018) 
+```
+
+```{r eval=FALSE, include=FALSE}
+
+svm1_MAE <- mean(EP_model_svm1$svm_absError, na.rm = T)
+svm1_MAPE <- mean(EP_model_svm1$svm_APE, na.rm = T)
+svm1_acc <- data.frame(svm1_MAE, svm1_MAPE)
+kable(svm1_acc) %>% 
+  kable_styling(full_width = F)
+
+```
+
+```{r set up svm model 2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+svm_reg2 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                 car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                 road_age + VMT_pop + dist_hydro + dist_major_int + 
+                 CLASS + land_use_type + 
+                 rb_base + rb_surface +
+                 floodzone_highrisk,
+               data = EP_model_train, 
+               kernel = "radial", 
+               cost = 10, 
+               scale = FALSE)
+
+print(svm_reg2)
+
+```
+
+
+```{r prediction with svm model 2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_svm2 <- 
+  EP_model_test %>%
+  mutate(svm_predict = predict(svm_reg2, EP_model_test),
+         svm_error = svm_predict - PCI_2018,
+         svm_absError = abs(svm_predict - PCI_2018),
+         svm_APE = abs((svm_predict - PCI_2018)) / PCI_2018) 
+
+```
+
+```{r results='show'}
+
+svm2_MAE <- mean(EP_model_svm2$svm_absError, na.rm = T)
+svm2_MAPE <- mean(EP_model_svm2$svm_APE, na.rm = T)
+svm2_acc <- data.frame(svm2_MAE, svm2_MAPE)
+svm2_acc_table <- kable(svm2_acc) %>% 
+  kable_styling(full_width = F)
+```
+
+```{r set up svm model 3, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+svm_reg3 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                 car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                 road_age + VMT_pop + dist_hydro + dist_major_int + 
+                 CLASS + land_use_type + 
+                 rb_base + rb_surface +
+                 floodzone_highrisk,
+               data = EP_model_train, 
+               kernel = "sigmoid", 
+               cost = 10, 
+               scale = FALSE)
+
+print(svm_reg3)
+
+```
+
+
+```{r prediction with svm model 3, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_svm3 <- 
+  EP_model_test %>%
+  mutate(svm_predict = predict(svm_reg3, EP_model_test),
+         svm_error = svm_predict - PCI_2018,
+         svm_absError = abs(svm_predict - PCI_2018),
+         svm_APE = abs((svm_predict - PCI_2018)) / PCI_2018) 
+```
+
+```{r results='show'}
+svm3_MAE <- mean(EP_model_svm3$svm_absError, na.rm = T)
+svm3_MAPE <- mean(EP_model_svm3$svm_APE, na.rm = T)
+svm3_acc <- data.frame(svm3_MAE, svm3_MAPE)
+
+svm_acc_table <- kable(svm3_acc) %>% 
+  kable_styling(full_width = F)
+svm_acc_table
+```
+
+## 6.6 XGBoost
+
+```{r select features for xgb, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+xgb_train <-
+  EP_model %>% 
+  subset(ind == 1) %>%
+  dplyr::select(PCI_2018, crash_len16_18, potholes_len16_18,  
+                 car_facility_nn3, entertainment_nn3, food_drink_nn3,  
+                 road_age, VMT_pop, dist_hydro, dist_major_int,  
+                 CLASS, land_use_type,  
+                 #rb_base, rb_surface, 
+                 floodzone_highrisk, ind)
+xgb_test <-
+  EP_model %>% 
+  subset(ind == 2) %>%
+  dplyr::select(PCI_2018, crash_len16_18, potholes_len16_18,  
+                 car_facility_nn3, entertainment_nn3, food_drink_nn3,  
+                 road_age, VMT_pop, dist_hydro, dist_major_int,  
+                 CLASS, land_use_type,  
+                 #rb_base, rb_surface, 
+                 floodzone_highrisk, ind)
+
+xgb_all = rbind(xgb_train,xgb_test)
+```
+
+```{r one hot encoding, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# one hot encoding
+ohe_feats = c('CLASS', 'land_use_type', 'floodzone_highrisk')
+dummies <- dummyVars(~ CLASS +  land_use_type + floodzone_highrisk, data = xgb_all)
+
+xgb_ohe <- as.data.frame(predict(dummies, newdata = xgb_all))
+xgb_combined <- cbind(xgb_all[,-c(which(colnames(xgb_all) %in% ohe_feats))], xgb_ohe)
+```
+
+```{r split train and test set for xgb, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+xgb_train <- 
+  xgb_combined %>%
+  subset(ind == 1)
+
+xgb_test <- 
+  xgb_combined %>%
+  subset(ind == 2)
+
+x_train <-
+  xgb_train %>%
+  st_drop_geometry() %>%
+  dplyr::select(-ind, -PCI_2018)
+y_train <-
+  xgb_train %>%
+  st_drop_geometry() %>%
+  dplyr::select(PCI_2018)
+
+x_test <-
+  xgb_test %>%
+  st_drop_geometry() %>%
+  dplyr::select(-ind, -PCI_2018)
+y_test <-
+  xgb_test %>%
+  st_drop_geometry() %>%
+  dplyr::select(PCI_2018)
+
+train_set <- xgb.DMatrix(data = as.matrix(x_train), label = as.matrix(y_train))
+test_set <- xgb.DMatrix(data = as.matrix(x_test), label = as.matrix(y_test))
+```
+
+```{r train xgb model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+xgb <- xgboost(data = train_set,
+               #booster = 'gbtree', 
+               eta = 0.15,
+               max_depth = 11, 
+               nround=1000, 
+               subsample = 0.5,
+               colsample_bytree = 0.5,
+               objective = "reg:squarederror",
+)
+xgb
+```
+
+
+```{r xgb predict and calculate errors, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+xgb_result <- x_test
+xgb_result$PCI_2018 <- y_test$PCI_2018
+CLASS <- EP_model %>% 
+  subset(ind == 2) %>%
+  st_drop_geometry() %>%
+  dplyr::select(CLASS)
+xgb_result$CLASS <- CLASS$CLASS
+
+floodzone_highrisk <- EP_model %>% 
+  subset(ind == 2) %>%
+  st_drop_geometry() %>%
+  dplyr::select(floodzone_highrisk)
+xgb_result$floodzone_highrisk <- floodzone_highrisk$floodzone_highrisk
+
+xgb_result$pred_xgb <- predict(xgb, as.matrix(x_test))
+xgb_result$absError <- abs(xgb_result$pred_xgb - xgb_result$PCI_2018)
+
+
+```
+
+
+```{r results='show'}
+xgb_MAE <- mean(abs(xgb_result$pred_xgb - xgb_result$PCI_2018)) #MAE
+xgb_MAPE <- mean(abs(xgb_result$pred_xgb - xgb_result$PCI_2018)/xgb_result$PCI_2018) 
+#MAPE
+xgb_acc <- data.frame(xgb_MAE, xgb_MAPE)
+
+xgb_acc_table <- kable(xgb_acc) %>% 
+  kable_styling(full_width = F)
+xgb_acc_table
+```
+
+```{r grid search cv for xgb, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+hyper_grid <- expand.grid(max_depth = seq(1, 12, 2), eta = seq(.1, .3, .05))  
+xgb_train_rmse <- 0
+xgb_test_rmse <- 0
+
+for (j in 1:nrow(hyper_grid)) {
+  set.seed(123)
+  m_xgb_untuned <- xgb.cv(
+    data = train_set,
+    nrounds = 1000,
+    objective = "reg:squarederror",
+    early_stopping_rounds = 3,
+    nfold = 5,
+    max_depth = hyper_grid$max_depth[j],
+    eta = hyper_grid$eta[j]
+  )
+  
+  xgb_train_rmse[j] <- m_xgb_untuned$evaluation_log$train_rmse_mean[m_xgb_untuned$best_iteration]
+  xgb_test_rmse[j] <- m_xgb_untuned$evaluation_log$test_rmse_mean[m_xgb_untuned$best_iteration]
+  
+  cat(j, "\n")
+}    
+
+
+```
+
+## 6.7 Visualizing Select Model Results
+
+### 6.7.1 Results for RF
+
+```{r RF prediction result distribution, message=FALSE, warning=FALSE}
+EP_model_rf1 %>%
+ggplot(aes(CLASS, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+  labs(title = "Absolute Error vs. Road Class",
+         y="Absolute Error",
+         x="Road Class",
+       subtitle = "Random Forest")  + 
+  plotTheme()
+
+EP_model_rf1 %>%
+ggplot(aes(PCI_2018, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI",
+       subtitle = "Random Forest")  + 
+  plotTheme()
+
+EP_model_rf1 %>%
+ggplot(aes(floodzone_highrisk, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="Floodzone",
+       subtitle = "Random Forest")  + 
+  plotTheme()
+```
+
+### 6.7.2 Results for XGBoost
+
+```{r XGB prediction result distribution, message=FALSE, warning=FALSE}
+xgb_result %>%
+ggplot(aes(CLASS, absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+  labs(title = "Absolute Error vs. Road Class",
+         y="Absolute Error",
+         x="Road Class",
+       subtitle = "XGBoost")  + 
+  plotTheme()
+
+xgb_result %>%
+ggplot(aes(PCI_2018, absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI",
+       subtitle = "XGBoost")  + 
+  plotTheme()
+
+xgb_result %>%
+ggplot(aes(floodzone_highrisk, absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#08519c") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="Floodzone",
+       subtitle = "XGBoost")  + 
+  plotTheme()
+```
+
