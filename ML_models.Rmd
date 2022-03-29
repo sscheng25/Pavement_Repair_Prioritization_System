@@ -128,6 +128,38 @@ kable(acc) %>%
 
 ```
 
+```{r rf model 4}
+rf_model4 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=10,
+                         bootstrap=T)
+
+rf_model4
+importance(rf_model4)
+
+EP_model_test4 <- 
+  EP_model_test %>%
+  mutate(rf_predict4 = predict(rf_model4, EP_model_test),
+         rf_error4 = rf_predict4 - PCI_2018,
+         rf_absError4 = abs(rf_predict4 - PCI_2018),
+         rf_APE4 = (abs(rf_predict4 - PCI_2018)) / PCI_2018) 
+
+
+MAE <- mean(EP_model_test4$rf_absError4, na.rm = T)
+MAPE <- mean(EP_model_test4$rf_APE4, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+```
+
+
+
 ```{r grid search mtry for RF model}
 control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
 set.seed(111)
@@ -144,6 +176,39 @@ rf_gridsearch <- train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 +
                        trControl=control)
 print(rf_gridsearch)
 plot(rf_gridsearch)
+```
+
+```{r interactive rf}
+rf_model3 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age*VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=15,
+                         bootstrap=F)
+
+rf_model3
+importance(rf_model3)
+```
+
+```{r prediction with rf model 3}
+EP_model_test3 <- 
+  EP_model_test %>%
+  mutate(rf_predict3 = predict(rf_model3, EP_model_test),
+         rf_error3 = rf_predict3 - PCI_2018,
+         rf_absError3 = abs(rf_predict3 - PCI_2018),
+         rf_APE3 = (abs(rf_predict3 - PCI_2018)) / PCI_2018) 
+
+
+MAE <- mean(EP_model_test3$rf_absError3, na.rm = T)
+MAPE <- mean(EP_model_test3$rf_APE3, na.rm = T)
+acc <- data.frame(MAE, MAPE)
+kable(acc) %>% 
+  kable_styling(full_width = F)
+
 ```
 
 ```{r grid search bootstrap for RF model}
@@ -397,7 +462,31 @@ ggplot(aes(floodzone_highrisk, rf_absError)) +
   plotTheme()
 ```
 
+```{r}
+EPCenterline_2016to2018 
 
+crash_breaks = c(0, 0.2, 0.5, 1, 2, 5, 10, 150)
+ggplot() +
+  geom_sf(data = El_Paso_city, color="grey") +
+  geom_sf(data = EPCenterline_2016to2018 %>% na.omit() %>% subset(crash_len16_18 >0), aes(colour=crash_len16_18), size=1, show.legend = "point") +
+  scale_colour_viridis(breaks=crash_breaks, labels=crash_breaks, trans = "log",
+                       limits = c(1, 250), name="Number of crashes\n")+
+  labs(title = "Crash Numbers per Segment Length",
+       subtitle = "El Paso, TX") + 
+  mapTheme()
+
+ggplot(EPCenterline_2016to2018 , aes(y=crash_len16_18)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "Waze Jams Count by Subtype",
+       y="Count",
+       x="Jam Subtype",
+       subtitle = "El Paso, TX") + plotTheme()
+```
+
+```{r}
+test <-EPCenterline_2016to2018 %>% subset(EPCenterline_2016to2018$crash_len16_18 <10)
+hist(round(test$crash_len16_18))
+```
 
 
 

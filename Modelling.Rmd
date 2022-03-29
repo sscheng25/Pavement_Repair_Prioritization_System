@@ -116,11 +116,11 @@ Please download the **EDA.RData** file from [google drive](https://drive.google.
 
 ```{r import rdata from EDA, message=FALSE, warning=FALSE}
 # RData from EDA part, please make sure to run this properly
-load("Data/EDA.RData")
+# load("Data/EDA.RData")
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-# load("Data/modelling_0325.RData")
+load("Data/modelling_0325.RData")
 ```
 
 # 1. Further EDA and Feature Engineering
@@ -850,6 +850,17 @@ CLASS <- EP_model %>%
   st_drop_geometry() %>%
   dplyr::select(CLASS)
 xgb_result$CLASS <- CLASS$CLASS
+pave_length <- EP_model %>% 
+  subset(ind == 2) %>%
+  st_drop_geometry() %>%
+  dplyr::select(pave_length)
+xgb_result$pave_length <- round(as.numeric(pave_length$pave_length), digits = -1)
+
+land_use_type <- EP_model %>% 
+  subset(ind == 2) %>%
+  st_drop_geometry() %>%
+  dplyr::select(land_use_type)
+xgb_result$land_use_type <- land_use_type$land_use_type
 
 floodzone_highrisk <- EP_model %>% 
   subset(ind == 2) %>%
@@ -898,9 +909,12 @@ for (j in 1:nrow(hyper_grid)) {
 ## Results for RF
 
 ```{r RF prediction result distribution, message=TRUE, warning=TRUE}
+EP_model_rf1$pave_length <-
+  round(as.numeric(EP_model_rf1$pave_length), digits = -1)
+  
 EP_model_rf1 %>%
 ggplot(aes(CLASS, rf_absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
   labs(title = "Absolute Error vs. Road Class",
          y="Absolute Error",
          x="Road Class",
@@ -909,7 +923,7 @@ ggplot(aes(CLASS, rf_absError)) +
 
 EP_model_rf1 %>%
 ggplot(aes(PCI_2018, rf_absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
   labs(title = "Absolute Error vs. PCI",
          y="Absolute Error",
          x="PCI",
@@ -918,10 +932,29 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 EP_model_rf1 %>%
 ggplot(aes(floodzone_highrisk, rf_absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
-  labs(title = "Absolute Error vs. PCI",
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. Flood Zone",
          y="Absolute Error",
          x="Floodzone",
+       subtitle = "Random Forest")  + 
+  plotTheme()
+
+EP_model_rf1 %>%
+ggplot(aes(pave_length, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  xlim(0, 1500) +
+  labs(title = "Absolute Error vs. Pavement Length",
+         y="Absolute Error",
+         x="Pave length",
+       subtitle = "Random Forest")  + 
+  plotTheme()
+
+EP_model_rf1 %>%
+ggplot(aes(rf_absError, land_use_type)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. Land Use",
+         x="Absolute Error",
+         y="Land Use Type",
        subtitle = "Random Forest")  + 
   plotTheme()
 ```
@@ -931,7 +964,7 @@ ggplot(aes(floodzone_highrisk, rf_absError)) +
 ```{r XGB prediction result distribution, message=TRUE, warning=TRUE}
 xgb_result %>%
 ggplot(aes(CLASS, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
   labs(title = "Absolute Error vs. Road Class",
          y="Absolute Error",
          x="Road Class",
@@ -940,7 +973,7 @@ ggplot(aes(CLASS, absError)) +
 
 xgb_result %>%
 ggplot(aes(PCI_2018, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
   labs(title = "Absolute Error vs. PCI",
          y="Absolute Error",
          x="PCI",
@@ -949,10 +982,29 @@ ggplot(aes(PCI_2018, absError)) +
 
 xgb_result %>%
 ggplot(aes(floodzone_highrisk, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#3FB0C0") +  
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
   labs(title = "Absolute Error vs. PCI",
          y="Absolute Error",
          x="Floodzone",
+       subtitle = "XGBoost")  + 
+  plotTheme()
+
+xgb_result %>%
+ggplot(aes(pave_length, absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  xlim(0, 1500) +
+  labs(title = "Absolute Error vs. Pavement Length",
+         y="Absolute Error",
+         x="Pave length",
+       subtitle = "XGBoost")  + 
+  plotTheme()
+
+xgb_result %>%
+ggplot(aes(absError, land_use_type)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. Land Use",
+         x="Absolute Error",
+         y="Land Use Type",
        subtitle = "XGBoost")  + 
   plotTheme()
 ```
