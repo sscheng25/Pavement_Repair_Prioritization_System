@@ -1,0 +1,144 @@
+---
+title: "Extra 311 Data Exploration"
+author: "Jenna Epstein"
+date: '2022-04-03'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries and palettes setup}
+library(dplyr)
+library(sf)
+library(tidyverse)
+library(readxl)
+library(zoo)
+library(lubridate)
+library(ggplot2)
+library(viridis)
+
+palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
+palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
+palette_4 <-c("#08519c","#3bf0c0","#e6a52f","#e76420")
+palette_2 <-c("#e6a52f","#08519c")
+palette_3 <-c("#e6a52f","#08519c", "#e76420")
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.text.x = element_text(size = 14))
+}
+
+plotTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle = element_text(face="italic"),
+    plot.caption = element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line("grey80", size = 0.1),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.background = element_rect(fill = "grey80", color = "white"),
+    strip.text = element_text(size=12),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10),
+    plot.background = element_blank(),
+    legend.background = element_blank(),
+    legend.title = element_text(colour = "black", face = "italic"),
+    legend.text = element_text(colour = "black", face = "italic"),
+    strip.text.x = element_text(size = 14)
+  )
+}
+```
+
+```{r message=FALSE, warning=FALSE}
+#IMPORT 311 DATA FOR CLEANING, starting with 2020 to 2021
+library(readxl)
+SAM_RS_CONSOLE_202101_20220223 <- read_excel("~/MCP/Spring_2022/MUSA801_Practicum/SAM_RS_CONSOLE_202101_20220223.xlsx")
+Data311_2020to2021 <- SAM_RS_CONSOLE_202101_20220223 %>% as.data.frame()
+
+```
+
+```{r parsing out year and year and month}
+library(zoo)
+#what years and months? starts October 26, 2020
+#Create column for just the year
+Data311_2020to2021$YearCreated <- format(ymd_hms(Data311_2020to2021$DateCreated), format='%Y')
+
+#Create a column that contains month and year
+Data311_2020to2021$MonthYear <- format(as.yearmon(Data311_2020to2021$DateCreated))
+glimpse(Data311_2020to2021)
+```
+
+```{r import rdata from EDA, message=FALSE, warning=FALSE}
+
+#Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
+
+# RData from EDA part, please make sure to run this properly
+load("Data/EDA.RData")
+
+# OPTIONAL BELOW:
+# modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
+load("Data/modelling_0325.RData")
+```
+
+
+```{r cleaning up duplicates in 2020 to 2021 data}
+# lots of duplicates
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "School Flasher", "School Flashers"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Pothole", "Potholes"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Pavement Markings, Striping", "Pavement Markings - Striping"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Street Light (Illumination)", "Street Light - Illumination"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Light/Sign - CALL 911 TO REPORT A DANGEROUS OR EMERGENCY SITUATION. Report problems with Crosswalk, Road Striping, School Flashers, Street Hump, Street Light, Street Name Sign, Traffic Sign, Traffic Circle/Roundabout.", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Sign", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Light/Sign", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Signal", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Light", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Light/Sign	- CALL 911 TO REPORT A DANGEROUS OR EMERGENCY SITUATION. Crosswalk, Road Striping, School Flashers, Street Hump, Street Light, Street Name Sign, Traffic Sign, Traffic Circle/Roundabout.", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Traffic Light/Sign	- CALL 911 TO REPORT A DANGEROUS OR EMERGENCY SITUATION. Report problems with Crosswalk, Road Striping, School Flashers, Street Hump, Street Light, Street Name Sign, Traffic Sign, Traffic Circle/Roundabout.", "Traffic Light/Sign/Signal"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Street Maintenance- Report Potholes, request Street Sweeping, Street and Alley Clean up, Guardrail Repair", "Street Maintenance (Broad Category)"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Mantenimiento de calles", "Street Maintenance (Broad Category"))
+Data311_2020to2021 <- Data311_2020to2021 %>% mutate(RequestType = replace(RequestType, RequestType == "Street Maintenance", "Street Maintenance (Broad Category"))
+
+```
+
+```{r}
+ggplot(Data311_2020to2021, aes(RequestType)) +
+  geom_bar(width=0.5, color="black", fill = "#08519c") +
+  labs(title = "311 Data by Request Type",
+       x="Count",
+       y="Request Type",
+       subtitle = "October 26, 2020 - April 2021 | El Paso, TX") +
+   scale_x_discrete(labels = wrap_format(10)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=8))+plotTheme()
+```
+
+```{r check group counts}
+Data311_2020to2021_grouped <-Data311_2020to2021 %>%
+  group_by(RequestType) %>% summarize(Count = n())
+
+Data311_2020to2021_grouped
+```
+
+
+```{r}
+#311 data for 20016-2020
+CID_Publicstuff_CW_SAM_Data <- read_excel("~/MCP/Spring_2022/MUSA801_Practicum/CID_Publicstuff_CW_SAM_Data.xlsx", sheet = "PubStuff_Streets_Maintenance")
+Data311_2016to2020 <- CID_Publicstuff_CW_SAM_Data %>% as.data.frame()
+```

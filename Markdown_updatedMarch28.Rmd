@@ -105,8 +105,8 @@ plotTheme <- function(base_size = 12) {
 
 ```
 
-```{r import rdata from EDA, message=FALSE, warning=FALSE}
 
+```{r message=FALSE, warning=FALSE}
 #Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
 
 # RData from EDA part, please make sure to run this properly
@@ -732,6 +732,20 @@ EPCenterline_new6$potholes_len19_21 <- as.numeric(as.character(EPCenterline_new6
 
 We split data according to year groupings before running some correlations analyses to understand relationships between PCI and our features.
 
+```{r ensure numeric vars}
+#NEW -  make sure measurement variables are numeric BEFORE THE SPLIT
+
+EPCenterline_new6$dist_hydro <- as.numeric(as.character(EPCenterline_new6$dist_hydro))
+EPCenterline_new6$dist_major_int <- as.numeric(as.character(EPCenterline_new6$dist_major_int))
+EPCenterline_new6$pave_length <- as.numeric(as.character(EPCenterline_new6$pave_length))
+```
+
+```{r}
+# NEW - additional data cleanup
+EPCenterline_new6 <- EPCenterline_new6 %>% select(-CNTY_SEAT_FLAG)
+```
+
+
 ```{r EPCenterline data splits}
 # 2016-2018
 EPCenterline_2016to2018<- subset(EPCenterline_new6, select= -c(crash_count19_21, crash_len19_21, potholes_count19_21,potholes_len19_21))
@@ -740,6 +754,7 @@ EPCenterline_2016to2018<- subset(EPCenterline_new6, select= -c(crash_count19_21,
 EPCenterline_2019to2021 <- subset(EPCenterline_new6, select= -c(crash_count16_18, crash_len16_18, potholes_count16_18,potholes_len16_18, PCI_2018))
 
 ```
+
 
 ### 4.4.1 Numeric Variable Correlations for 2016-2018 Grouping
 
@@ -846,9 +861,11 @@ ggplot(aes(land_use_type, PCI_2018)) +
 
 ### 4.4.3 Variable Transformations
 
-Looking at the variable distributions, we decided to explore some transformations.
+Looking at the variable distributions, we decided to explore some transformations. We looking across the distributions of numeric variables to get a sense of how they each look.
+
 
 ```{r distribution of predictors, message=FALSE, warning=FALSE}
+# Looking across the distributions of numeric variables to get a sense of how they each look
 EP_model <- EPCenterline_2016to2018 %>% na.omit()
 hist(EP_model$crash_len16_18)
 hist(EP_model$potholes_len16_18)
@@ -863,6 +880,9 @@ hist(EP_model$dist_hydro)
 hist(EP_model$dist_major_int)
 ```
 
+
+Distributions: log transformations of crash length, potholes length, and distance to hydrology.
+
 ```{r log transformation, message=FALSE, warning=FALSE}
 EP_model$crash_len16_18 <- log(EP_model$crash_len16_18 + 2)
 hist(EP_model$crash_len16_18)
@@ -873,6 +893,9 @@ EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
 hist(EP_model$dist_hydro)
 
 ```
+
+
+
 
 # 5. Modeling
 
@@ -897,12 +920,41 @@ EP_model_test <-
 ## 5.2 OLS Regression
 
 ```{r start with linear regression, message=FALSE, warning=FALSE, results='hide'}
+# OLS_reg1 <- 
+#   lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
+#        car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
+#        road_age + VMT_pop + dist_hydro + dist_major_int + 
+#        # med_hh_income + pct_transport_to_work + pctWhite + 
+#        CLASS + land_use_type + floodzone_highrisk,
+#      data = EP_model_train)
+# 
+# stargazer(OLS_reg1, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
+# summary(OLS_reg1)
+# 
+# EP_model_OLS <-
+#   EP_model_test %>%
+#   mutate(PCI.Predict = predict(OLS_reg1, EP_model_test),
+#          PCI.Error = PCI.Predict - PCI_2018,
+#          PCI.AbsError = abs(PCI.Predict - PCI_2018),
+#          PCI.APE = (abs(PCI.Predict - PCI_2018)) / PCI_2018) 
+# 
+# MAE <- mean(EP_model_OLS$PCI.AbsError, na.rm = T)
+# MAPE <- mean(EP_model_OLS$PCI.APE, na.rm = T)
+# acc <- data.frame(MAE, MAPE)
+# ols_acc_table <- kable(acc) %>% 
+#   kable_styling(full_width = F)
+# 
+
+
+```
+
+
+```{r}
+# jenna added to OLS_reg1- this version has an interaction variable (road_age * CLASS); also added DISTRICT as a categorical variable
 OLS_reg1 <- 
-  lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
-       car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
-       road_age + VMT_pop + dist_hydro + dist_major_int + 
-       # med_hh_income + pct_transport_to_work + pctWhite + 
-       CLASS + land_use_type + floodzone_highrisk,
+  lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + VMT_pop + dist_hydro + dist_major_int + DISTRICT + car_facility_nn3 + entertainment_nn3 +
+     # CLASS + road_age +
+    + land_use_type + floodzone_highrisk +(road_age * CLASS),
      data = EP_model_train)
 
 stargazer(OLS_reg1, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
@@ -921,13 +973,12 @@ acc <- data.frame(MAE, MAPE)
 ols_acc_table <- kable(acc) %>% 
   kable_styling(full_width = F)
 
-
-
 ```
+
+
 
 ```{r}
 ols_acc_table 
-
 ```
 
 ```{r k-fold cross validation for OLS model, message=FALSE, warning=FALSE, results='hide'}
