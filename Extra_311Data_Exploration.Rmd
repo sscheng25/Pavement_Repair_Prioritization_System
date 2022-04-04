@@ -70,7 +70,7 @@ plotTheme <- function(base_size = 12) {
 ```{r message=FALSE, warning=FALSE}
 #IMPORT 311 DATA FOR CLEANING, starting with 2020 to 2021
 library(readxl)
-SAM_RS_CONSOLE_202101_20220223 <- read_excel("~/MCP/Spring_2022/MUSA801_Practicum/SAM_RS_CONSOLE_202101_20220223.xlsx")
+SAM_RS_CONSOLE_202101_20220223 <- read_excel("Data/SAM_RS_CONSOLE_202101_20220223.xlsx")
 Data311_2020to2021 <- SAM_RS_CONSOLE_202101_20220223 %>% as.data.frame()
 
 ```
@@ -139,6 +139,6 @@ Data311_2020to2021_grouped
 
 ```{r}
 #311 data for 20016-2020
-CID_Publicstuff_CW_SAM_Data <- read_excel("~/MCP/Spring_2022/MUSA801_Practicum/CID_Publicstuff_CW_SAM_Data.xlsx", sheet = "PubStuff_Streets_Maintenance")
+CID_Publicstuff_CW_SAM_Data <- read_excel("Data/CID_Publicstuff_CW_SAM_Data.xlsx", sheet = "PubStuff_Streets_Maintenance")
 Data311_2016to2020 <- CID_Publicstuff_CW_SAM_Data %>% as.data.frame()
 ```

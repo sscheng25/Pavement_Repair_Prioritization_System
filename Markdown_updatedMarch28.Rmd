@@ -740,7 +740,7 @@ EPCenterline_new6$dist_major_int <- as.numeric(as.character(EPCenterline_new6$di
 EPCenterline_new6$pave_length <- as.numeric(as.character(EPCenterline_new6$pave_length))
 ```
 
-```{r}
+```{r additional data cleanup}
 # NEW - additional data cleanup
 EPCenterline_new6 <- EPCenterline_new6 %>% select(-CNTY_SEAT_FLAG)
 ```
@@ -901,6 +901,8 @@ hist(EP_model$dist_hydro)
 
 ## 5.1 Split to train and test set
 
+Before we start building the predition models, we randomly split our existing dataset into training set (80%) and test set (20%).
+
 ```{r split the data to train and test set, message=FALSE, warning=FALSE, results='hide'}
 set.seed(111)
 # EP_model <- EP_model %>% na.omit()
@@ -918,6 +920,7 @@ EP_model_test <-
 ```
 
 ## 5.2 OLS Regression
+We start with the basic linear regression model -- OLS model. We carefully selected numeric and categorical features and built up OLS_reg1 as follows. The OLS regression has a MAPE of 39.60% which is not very satisfying.
 
 ```{r start with linear regression, message=FALSE, warning=FALSE, results='hide'}
 # OLS_reg1 <- 
@@ -945,11 +948,6 @@ EP_model_test <-
 #   kable_styling(full_width = F)
 # 
 
-
-```
-
-
-```{r}
 # jenna added to OLS_reg1- this version has an interaction variable (road_age * CLASS); also added DISTRICT as a categorical variable
 OLS_reg1 <- 
   lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + VMT_pop + dist_hydro + dist_major_int + DISTRICT + car_facility_nn3 + entertainment_nn3 +
@@ -973,13 +971,11 @@ acc <- data.frame(MAE, MAPE)
 ols_acc_table <- kable(acc) %>% 
   kable_styling(full_width = F)
 
-```
 
-
-
-```{r}
 ols_acc_table 
 ```
+
+To test the generalizability of our OLS regression model, we applied k-fold cross validation. The distribution of MAE cluster quite tightly together (most of which are from 16 to 19 approximately), and this suggest that the model have a quite good generalizability.
 
 ```{r k-fold cross validation for OLS model, message=FALSE, warning=FALSE, results='hide'}
 
@@ -997,9 +993,17 @@ OLS_reg1.cv <-
 
 OLS_reg1.cv
 OLS_reg1.cv$resample[1:10,]
+
+MAE_reg <- OLS_reg1.cv$resample
+ggplot(MAE_reg, aes(MAE)) + 
+  geom_histogram(color="black", binwidth = 0.2, fill="#5192B0") +
+  labs(title = "Histogram of MAEs of Cross Validation", subtitle = "OLS regression",  x = "MAE", y= "Count") +
+  plotTheme()
 ```
 
 ## 5.3 Poisson Regression
+
+Poisson regression assumes the dependent variable, in our case the PCI value, has a Poisson distribution. We applied Poission regression model here and the model ends up with a MAPE of 92.26%, much worse than the OLS model below. Thus, we decided not to move forward with Poisson regression for our case.
 
 ```{r try poisson regression, message=FALSE, warning=FALSE, results='hide'}
 poisson_reg1 <- glm(formula = 
@@ -1030,6 +1034,10 @@ poisson_acc_table
 ```
 
 ## 5.4 Random Forest
+To achieve a better accuracy, we explore some sophisticated machine learning models. Random forest is a kind of tree model which consists of many decisions trees. It uses bagging and feature randomness when building each individual tree to try to create an uncorrelated forest of trees whose prediction by committee is more accurate than that of any individual tree.
+
+
+Here we set up two random forest models with the engineered features above and we selected hyperparameters numbers of trees 750 and mtry 15 according to the grid search cross validation result for better model performance. `rf_model1` is built with `bootstrap=True` while `rf_model2` with `bootstrap=False`. In fact, as the MAPEs show, the hyperparameter bootstrap does not do much in our models. `rf_model1` returns MAPE of 25.31% and `rf_model2` returns MAPE of 25.28%, the best performance so far.
 
 ### 5.4.1 Random Forest Model 1
 
@@ -1085,7 +1093,7 @@ EP_model_rf1 <-
 
 ```
 
-```{r}
+```{r rf 1 result}
 
 rf1_preds_MAE <- mean(EP_model_rf1$rf_absError, na.rm = T)
 rf1_preds_MAPE <- mean(EP_model_rf1$rf_APE, na.rm = T)
@@ -1106,7 +1114,7 @@ EP_model_rf2 <-
 
 ```
 
-```{r}
+```{r rf 2 result}
 rf2_preds_MAE <- mean(EP_model_rf2$rf_absError2, na.rm = T)
 rf2_preds_MAPE <- mean(EP_model_rf2$rf_APE2, na.rm = T)
 rf2_preds_acc <- data.frame(rf2_preds_MAE, rf2_preds_MAPE)
@@ -1137,6 +1145,8 @@ plot(rf_gridsearch)
 ```
 
 ## 5.5 SVM
+
+Support Vector Machine (SVM) is another kind of powerful supervised machine learning algorithm which is generally applied in classification and regression. Here we built up svm models with kernels `polynomial`, `radial`, and `sigmoid`. The best of three models returns MAPE of 47.13% and we decide not to work with svm further.
 
 ```{r set up svm model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 svm_reg1 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
@@ -1243,6 +1253,10 @@ svm_acc_table
 ```
 
 ## 5.6 XGBoost
+
+XGBoost is short for eXtreme Gradient Boosting package. It is an efficient and scalable implementation of gradient boosting framework including linear model and tree learning algorithm. It supports various objective functions, including regression, classification and ranking. Here we set up XGBoost model for PCI regression.
+
+The tuned XGBoost model returns MAPE of 27.18%, similar to the Random Forest model performance. Thus, we decide to move on with these two algorithms.
 
 ```{r select features for xgb, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 xgb_train <-
@@ -1389,7 +1403,8 @@ for (j in 1:nrow(hyper_grid)) {
 
 ```
 
-## 5.7 Visualizing Select Model Results
+## 5.7 Visualizing Selected Model Results
+Now that we decide to go further with random forest model and XGBoost model, we carefully examine their model results and error distributions among categorical groups and numeric variables.
 
 ### 5.7.1 Results for RF
 
