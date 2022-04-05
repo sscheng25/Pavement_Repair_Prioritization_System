@@ -107,7 +107,7 @@ plotTheme <- function(base_size = 12) {
 
 ```{r read in keys for Sisun, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
+#source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 ```
 
 ```{r read in keys for Jenna, message=FALSE, warning=FALSE, include=FALSE}
@@ -117,7 +117,7 @@ source("C:/Users/CSS/Desktop/MUSA801/Sisun.R")
 
 ```{r read in keys for Kristin, message=FALSE, warning=FALSE, include=FALSE}
 # UNCOMMENT THE LINE BELOW IF YOU ARE RUNNING THE RMD
-#source("Kristin.R")
+source("Kristin.R")
 ```
 
 # 1. Project Introduction

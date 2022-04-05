@@ -115,6 +115,28 @@ plotTheme <- function(base_size = 12) {
 # Predicted PCI
 
 ```{r PCI}
-EPCenterline_2019to2021 <- read.csv("Data/EPCenterline_2019to2021.csv")
+load("Data/EPCenterline_2019to2021.RData")
 ```
+
+# Equity Score
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
