@@ -1,0 +1,142 @@
+---
+title: "Decision Factors"
+author: "Sisun Cheng, Kristin Chang, Jenna Epstein"
+date: "04/05/2022"
+output:
+  html_document:
+    toc: yes
+    toc_float: TRUE
+    code_folding: hide
+editor_options:
+  chunk_output_type: inline
+---
+# 0. Set Up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, results = FALSE, message = FALSE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE, results='hide'}
+library(tidyverse)
+library(sf)
+library(lubridate)
+library(tigris)
+library(tidycensus)
+library(gganimate)
+library(viridis)
+library(riem)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(RSocrata)
+library(caret)
+library(purrr)
+library(FNN)
+library(stargazer)
+library(dplyr)
+library(spatstat)
+library(raster)
+library(spdep)
+library(grid)
+library(mapview)
+library(stringr)
+library(ggcorrplot)
+library(scales)
+library(colorspace)
+library(rgdal)          
+library(RColorBrewer) 
+library(rasterVis)    
+library(sp)
+library(ggpubr)
+library(leaflet)
+library(gganimate)
+library(gifski)
+library(transformr)
+library(jtools)
+library(stringr)
+
+library(randomForest)
+library(e1071)  # SVM
+library(xgboost)
+library(readr)
+library(car)
+
+palette_5 <- c("#0c1f3f", "#08519c", "#3bf0c0", "#e6a52f", "#e76420")
+palette_5blues <-c("#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c")
+palette_4 <-c("#08519c","#3bf0c0","#e6a52f","#e76420")
+palette_2 <-c("#e6a52f","#08519c")
+palette_3 <-c("#e6a52f","#08519c", "#e76420")
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+```
+
+```{r add plot and map themes for default visualizations, message=FALSE, warning=FALSE}
+mapTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle=element_text(face="italic"),
+    plot.caption=element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.text.x = element_text(size = 14))
+}
+
+plotTheme <- function(base_size = 12) {
+  theme(
+    text = element_text( color = "black"),
+    plot.title = element_text(size = 16,colour = "black"),
+    plot.subtitle = element_text(face="italic"),
+    plot.caption = element_text(hjust=0),
+    axis.ticks = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major = element_line("grey80", size = 0.1),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill=NA, size=2),
+    strip.background = element_rect(fill = "grey80", color = "white"),
+    strip.text = element_text(size=12),
+    axis.title = element_text(size=12),
+    axis.text = element_text(size=10),
+    plot.background = element_blank(),
+    legend.background = element_blank(),
+    legend.title = element_text(colour = "black", face = "italic"),
+    legend.text = element_text(colour = "black", face = "italic"),
+    strip.text.x = element_text(size = 14)
+  )
+}
+
+```
+
+# Predicted PCI
+
+```{r PCI}
+load("Data/EPCenterline_2019to2021.RData")
+```
+
+# Equity Score
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
