@@ -489,4 +489,86 @@ hist(round(test$crash_len16_18))
 ```
 
 
+## Interactive Variable
+```{r interactive variable}
+# (road_age * CLASS)
+rf_model3 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           (road_age * CLASS) + VMT_pop + dist_hydro + dist_major_int + 
+                           land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=15,
+                         bootstrap=F)
+
+```
+
+```{r rf3 result}
+rf_model3
+importance(rf_model3)
+```
+
+```{r prediction with rf model 3, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_rf3 <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_model3, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+```
+
+```{r rf 3 result}
+
+rf3_preds_MAE <- mean(EP_model_rf3$rf_absError, na.rm = T)
+rf3_preds_MAPE <- mean(EP_model_rf3$rf_APE, na.rm = T)
+rf3_preds_acc <- data.frame(rf3_preds_MAE, rf3_preds_MAPE)
+rf3_preds_acc_table <- kable(rf3_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf3_preds_acc_table
+```
+
+```{r test mtry}
+# (road_age * CLASS)
+rf_model4 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + CLASS + VMT_pop + dist_hydro + dist_major_int + 
+                           land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=10,
+                         bootstrap=F)
+
+```
+
+```{r prediction with rf model 4, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_rf4 <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_model4, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+```
+
+```{r rf 4 result}
+
+rf4_preds_MAE <- mean(EP_model_rf4$rf_absError, na.rm = T)
+rf4_preds_MAPE <- mean(EP_model_rf4$rf_APE, na.rm = T)
+rf4_preds_acc <- data.frame(rf4_preds_MAE, rf4_preds_MAPE)
+rf4_preds_acc_table <- kable(rf4_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf4_preds_acc_table
+```
+
+
+
+
+
 

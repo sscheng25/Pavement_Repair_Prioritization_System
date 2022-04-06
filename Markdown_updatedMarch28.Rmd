@@ -1530,3 +1530,125 @@ ggplot(aes(absError, land_use_type)) +
        subtitle = "XGBoost")  + 
   plotTheme()
 ```
+
+## Ensemble models
+```{r ensemble model 1 -- built environment}
+rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           VMT_pop + dist_hydro + land_use_type + floodzone_highrisk,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=6,
+                         bootstrap=T)
+
+rf_enmodel1
+importance(rf_enmodel1)
+```
+
+```{r prediction with ensemble model 1}
+EP_enmodel_rf1 <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_enmodel1, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+rf1_preds_MAE <- mean(EP_enmodel_rf1$rf_absError, na.rm = T)
+rf1_preds_MAPE <- mean(EP_enmodel_rf1$rf_APE, na.rm = T)
+rf1_preds_acc <- data.frame(rf1_preds_MAE, rf1_preds_MAPE)
+rf1_preds_acc_table <- kable(rf1_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf1_preds_acc_table
+```
+
+```{r ensemble model 2 -- road network}
+rf_enmodel2 <- randomForest(PCI_2018 ~  (road_age * CLASS) + dist_major_int + 
+                              crash_len16_18,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=3,
+                         bootstrap=T)
+
+rf_enmodel2
+importance(rf_enmodel2)
+```
+
+```{r prediction with ensemble model 2}
+EP_enmodel_rf2 <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_enmodel2, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+rf2_preds_MAE <- mean(EP_enmodel_rf2$rf_absError, na.rm = T)
+rf2_preds_MAPE <- mean(EP_enmodel_rf2$rf_APE, na.rm = T)
+rf2_preds_acc <- data.frame(rf2_preds_MAE, rf2_preds_MAPE)
+rf2_preds_acc_table <- kable(rf2_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf2_preds_acc_table
+```
+
+```{r ensemble model 3 -- road conditions}
+rf_enmodel3 <- randomForest(PCI_2018 ~  rb_base + rb_surface + potholes_len16_18,
+                         data = EP_model_train, 
+                         ntree=750,
+                         mtry=3,
+                         bootstrap=T)
+
+rf_enmodel3
+importance(rf_enmodel3)
+```
+
+```{r prediction with ensemble model 3}
+EP_enmodel_rf3 <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_enmodel3, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+rf3_preds_MAE <- mean(EP_enmodel_rf3$rf_absError, na.rm = T)
+rf3_preds_MAPE <- mean(EP_enmodel_rf3$rf_APE, na.rm = T)
+rf3_preds_acc <- data.frame(rf3_preds_MAE, rf3_preds_MAPE)
+rf3_preds_acc_table <- kable(rf3_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+rf3_preds_acc_table
+```
+### Ensemble modeling result
+```{r Ensemble modeling result}
+
+EP_enmodel_rf1 %>%
+ggplot(aes(PCI_2018, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI",
+       subtitle = "Ensemble Random Forest 1")  + 
+  plotTheme()
+
+EP_enmodel_rf2 %>%
+ggplot(aes(PCI_2018, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI",
+       subtitle = "Ensemble Random Forest 2")  + 
+  plotTheme()
+
+EP_enmodel_rf3 %>%
+ggplot(aes(PCI_2018, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI",
+       subtitle = "Ensemble Random Forest 3")  + 
+  plotTheme()
+
+```
+
+
+
+
