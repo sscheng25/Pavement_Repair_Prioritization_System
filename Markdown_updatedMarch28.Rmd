@@ -110,7 +110,7 @@ plotTheme <- function(base_size = 12) {
 #Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
 
 # RData from EDA part, please make sure to run this properly
-load("Data/EDA.RData")
+#load("Data/EDA.RData")
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
@@ -1617,6 +1617,57 @@ rf3_preds_acc_table <- kable(rf3_preds_acc) %>%
 
 rf3_preds_acc_table
 ```
+
+```{r ensembling preparation}
+EP_enmodel_all <- 
+  EP_model_test %>%
+  mutate(rf_predict1 = predict(rf_enmodel1, EP_model_test),
+         rf_predict2 = predict(rf_enmodel2, EP_model_test),
+         rf_predict3 = predict(rf_enmodel3, EP_model_test),) 
+
+set.seed(111)
+
+EP_enmodel_all$ind <- sample(2, nrow(EP_enmodel_all), replace = TRUE, prob=c(0.8, 0.2))
+
+EP_enmodel_train <-
+  EP_enmodel_all %>% 
+  subset(ind == 1) 
+
+EP_enmodel_test <-
+  EP_enmodel_all %>% 
+  subset(ind == 2) 
+
+```
+
+```{r ensembling}
+rf_ensemble <- randomForest(PCI_2018 ~  rf_predict1 + rf_predict2 + rf_predict3, 
+                         data = EP_enmodel_train, 
+                         ntree=750,
+                         mtry=3,
+                         bootstrap=T)
+
+rf_ensemble
+importance(rf_ensemble)
+```
+
+```{r ensemble prediction}
+EP_enmodel_prediction <- 
+  EP_enmodel_test %>%
+  mutate(rf_predict = predict(rf_ensemble, EP_enmodel_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+enmodel_preds_MAE <- mean(EP_enmodel_prediction$rf_absError, na.rm = T)
+enmodel_preds_MAPE <- mean(EP_enmodel_prediction$rf_APE, na.rm = T)
+enmodel_preds_acc <- data.frame(enmodel_preds_MAE, enmodel_preds_MAPE)
+enmodel_preds_acc_table <- kable(enmodel_preds_acc) %>% 
+  kable_styling(full_width = F)
+
+enmodel_preds_acc_table
+```
+
+
 ### Ensemble modeling result
 ```{r Ensemble modeling result}
 
@@ -1649,6 +1700,16 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 ```
 
+```{r}
+EP_enmodel_prediction %>%
+ggplot(aes(PCI_2018, rf_absError)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. PCI",
+         y="Absolute Error",
+         x="PCI",
+       subtitle = "Ensemble Random Forest 3")  + 
+  plotTheme()
+```
 
 
 
