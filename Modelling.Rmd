@@ -447,6 +447,23 @@ EPCenterline_new6 <-
 EPCenterline_new6$potholes_len19_21 <- as.numeric(as.character(EPCenterline_new6$potholes_len19_21))
 ```
 
+```{r functional classification}
+func_class <- st_read("Data/ElPaso_Func_Class/ElPaso_Func_Class.shp")%>%
+  st_transform('ESRI:102339')
+
+major_FCs <- c("Major Collector", "Principal Arterial - Other", "Interstate", "Principal Arterial - (Other Freeways and Expressways)")
+
+major_arterials <- func_class%>%
+  filter(FC_DESC == major_FCs)
+
+#return index of nearest feat in major_arterials to each feature in EPCenterline
+nearest_major_arterial <- st_nearest_feature(EPCenterline_new6, major_arterials) 
+
+EPCenterline_new6 <- EPCenterline_new6 %>%
+  mutate(dist_major_arterial = st_distance(EPCenterline_new6, major_arterials[nearest_major_arterial,], by_element=TRUE))
+```
+
+
 # 2. Modelling
 
 ## Splitting Data according to year
