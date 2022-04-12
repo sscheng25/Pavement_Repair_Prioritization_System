@@ -1189,7 +1189,7 @@ land_use_long <-
 
 land_use_majority <- land_use_long%>%
   group_by(GEOID, NAME)%>%
-  slice(which.max(sqft))%>%
+  dplyr::slice(which.max(sqft))%>%
   dplyr::select("GEOID","NAME","land_use_type")
 
 land_use_majority_sf <- land_use_majority %>%
