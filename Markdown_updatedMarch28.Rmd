@@ -1707,7 +1707,7 @@ ggplot(aes(PCI_2018, rf_absError)) +
   labs(title = "Absolute Error vs. PCI",
          y="Absolute Error",
          x="PCI",
-       subtitle = "Ensemble Random Forest 3")  + 
+       subtitle = "Ensemble Random Forest")  + 
   plotTheme()
 ```
 
