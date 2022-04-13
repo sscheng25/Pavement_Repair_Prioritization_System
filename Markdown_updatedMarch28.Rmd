@@ -114,7 +114,10 @@ plotTheme <- function(base_size = 12) {
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-load("Data/modelling_0325.RData")
+#load("Data/modelling_0325.RData")
+
+# latest version containing all RF models
+load("Data/0412-2.RData")
 ```
 
 # 1. Project Introduction
@@ -970,7 +973,7 @@ hist(EP_model$dist_hydro)
 
 ## 5.1 Split to train and test set
 
-Before we start building the predition models, we randomly split our existing dataset into training set (80%) and test set (20%).
+Before we start building the predition models, we randomly split our existing dataset into training set (70%) and test set (30%).
 
 ```{r split the data to train and test set, message=FALSE, warning=FALSE, results='hide'}
 set.seed(111)
@@ -1139,9 +1142,9 @@ rf_model2 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 +
                            road_age + VMT_pop + dist_hydro + dist_major_int + 
                            CLASS + land_use_type + 
                            rb_base + rb_surface +
-                           floodzone_highrisk,
+                           floodzone_highrisk + dist_major_arterial,
                          data = EP_model_train, 
-                         ntree=750,
+                         ntree=2000,
                          mtry=15,
                          bootstrap=F)
 
@@ -1539,6 +1542,71 @@ ggplot(aes(rf_absError, land_use_type)) +
   plotTheme()
 ```
 
+```{r RF result distribution 2}
+ggplot(EP_model_rf1 %>% subset(PCI_2018<50 & PCI_2018>25), aes(x=rf_error)) + 
+  geom_histogram(binwidth=3, fill="#5192B0", color="white") +  
+  labs(title = "Error Distribution (25 < PCI < 50)",
+         x="Error",
+         y="Count",
+       subtitle = "Random Forest") +
+  plotTheme()
+```
+
+```{r rf error spatial distribution}
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data = EP_model_rf1, aes(color=round(rf_error,-1)))+
+  scale_color_viridis_c(option = "G")+
+  labs(title="Spatial Distribution of Prediction Errors",
+       fill= "Zone",
+       subtitle="Random Forest") + 
+  mapTheme()
+
+# NAME_census
+test <- sub("\\..*", "", EP_model_rf1$NAME_census)
+EP_model_rf1$NAME_census2 <- gsub(",.*$", "", test)
+
+EP_model_rf1_plot <-
+  EP_model_rf1 %>%
+  group_by(NAME_census2)%>% 
+  summarise(mean_error = mean(rf_absError)) %>%
+  st_drop_geometry() %>%
+  arrange(mean_error)
+
+EP_model_rf1_plot %>%
+  ggplot(aes(y = reorder(NAME_census2, -mean_error), x = mean_error)) +
+  geom_bar(stat='identity', fill="#5192B0")+  
+  labs(title = "Absolute Error vs. Census Tract",
+         x="Absolute Error",
+         y="Census Tract",
+       subtitle = "Random Forest")  + 
+  plotTheme()
+
+census_geom <-
+  EP_econ %>%
+  subset(select = c("GEOID","geometry"))
+
+EP_model_rf1_plot2 <-
+  EP_model_rf1 %>%
+  group_by(GEOID)%>% 
+  summarise(mean_error = mean(rf_absError)) %>%
+  st_drop_geometry() %>%
+  merge(census_geom, on="GEOID")
+
+EP_model_rf1_plot3 <-
+  census_geom %>%
+  merge(EP_model_rf1_plot2, on="GEOID")
+
+ggplot()+
+  geom_sf(data=El_Paso_city, aes(), color="grey")+
+  geom_sf(data=EP_model_rf1_plot3, aes(fill=mean_error), color="grey")+
+  scale_fill_viridis(option='G', direction=-1)+
+  labs(title="Spatial Distribution of Prediction Errors - Census Tract",
+       fill= "AbsError",
+       subtitle="Random Forest") + 
+  mapTheme()
+```
+
 ### 5.7.2 Results for XGBoost
 
 ```{r XGB prediction vs real PCI, message=TRUE, warning=TRUE}
@@ -1600,7 +1668,7 @@ ggplot(aes(absError, land_use_type)) +
   plotTheme()
 ```
 
-## Ensemble models
+## 5.8 Ensemble models
 ```{r ensemble model 1 -- built environment}
 rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                            VMT_pop + dist_hydro + land_use_type + floodzone_highrisk,
@@ -1632,7 +1700,7 @@ rf1_preds_acc_table
 
 ```{r ensemble model 2 -- road network}
 rf_enmodel2 <- randomForest(PCI_2018 ~  (road_age * CLASS) + dist_major_int + 
-                              crash_len16_18,
+                              crash_len16_18 + dist_major_arterial,
                          data = EP_model_train, 
                          ntree=750,
                          mtry=3,
@@ -1769,7 +1837,7 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 ```
 
-```{r}
+```{r Ensemble modeling result2}
 EP_enmodel_prediction %>%
 ggplot(aes(PCI_2018, rf_absError)) +
   geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
