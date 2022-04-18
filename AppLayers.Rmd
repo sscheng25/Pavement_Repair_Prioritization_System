@@ -114,8 +114,14 @@ plotTheme <- function(base_size = 12) {
 
 # Load data from modeling rmd for crash and waze data
 ?? how do we want to display this data? Should we aggregate number of crashes to the same hex bins of the equity data? 
-```{r PCI}
+```{r PCI 2018}
 load("Data/EPCenterline_new6.RData")
+
+PCI2018 <- EPCenterline_new6%>%
+  dplyr::select(PCI_2018)
+
+#writing out the file as a geojson
+st_write(PCI2018, "PCI2018.geojson")
 ```
 
 # Load equity score data
