@@ -115,14 +115,14 @@ plotTheme <- function(base_size = 12) {
 #Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
 
 # RData from EDA part, please make sure to run this properly
-#load("Data/EDA.RData")
+load("Data/EDA.RData")
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-#load("Data/modelling_0325.RData")
+load("Data/modelling_0325.RData")
 
 # latest version containing all RF models
-load("Data/0412-2.RData")
+#load("Data/0412-2.RData")
 ```
 
 # 1. Project Introduction
@@ -157,7 +157,7 @@ knitr::include_graphics("Images/PCI-plot-white.jpg")
 
 ## 3.2. Road Anatomy
 
-To better inform our model, we wanted to understand the different parts of a road and what factors may lead to worsening conditions over time. We identified three main road anatomy-related features to pay attention to: the earth foundation, the roadbed base, and the surface.
+To better inform our model, we wanted to understand the different parts of a road and what factors may lead to worsening conditions over time. We identified three main road anatomy-related features to pay attention to: the earth foundation, the roadbed base, and the road surface.
 
 ```{r echo=TRUE}
 knitr::include_graphics("Images/road_cross_section.png")
@@ -285,7 +285,7 @@ We also extract some socioeconomic variables from the ACS data.
 Median household income also has an impact on the local infrastructure construction and repair. Furthermore, it is a good way to examine the equity of resource allocation by checking the difference between high- and low-income tracts.
 
 
-```{r census_socioecon_hhincome_map, fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+```{r census_socioecon_hhincome_map, message=FALSE, warning=FALSE}
 #Median household income
 ggplot()+
   geom_sf(data=EP_econ, aes(fill=med_hh_income), color="grey")+
@@ -388,6 +388,8 @@ ggplot(EPCenterline_with_PCI, aes(y=PCI_2018), color="grey") +
 ```
 
 We also map the segments colored by PCI score to see the spatial distribution of scores across the city. Higher scores - denoted by the darker purples - tend to be located towards the outer edges of the city, especially to the eastern portions.
+
+_JE NOTE: Add a mapview version of this map for interactive and legibility, if time_
 
 ```{r centerlines with pci map, message=FALSE, warning=FALSE}
 ggplot()+
@@ -582,7 +584,7 @@ At this point, we also calculate the third nearest neighbors to use as the engin
 
 We obtained the new preliminary FEMA flood zone maps from the City of El Paso.
 
-```{r bring in the 2020 preliminary flood zone data and clip, message=FALSE, warning=FALSE}
+```{r bring in the 2020 preliminary flood zone data and clip, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 prelim_floodzones_2020 <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp" )%>%
   st_transform('ESRI:102339')
 
@@ -615,7 +617,7 @@ EPCenterline_new6 <-
 
 ### 4.3.7 Crashes
 
-```{r udpated crash data according to year, message=FALSE, warning=FALSE}
+```{r udpated crash data according to year, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 #read in new data
 crash16 <- st_read("Data/CRIS2016/CRIS2016.shp")
 crash17<- st_read("Data/CRIS2017/CRIS2017.shp")
@@ -738,7 +740,7 @@ EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_surface_PCI, on="index
 EPCenterline_new6[,c("rb_base","rb_surface")][is.na(EPCenterline_new6[,c("rb_base","rb_surface")])] <- "Unknown"
 ```
 
-```{r update potholes feature}
+```{r update potholes feature, message=FALSE, warning=FALSE}
 ## Potholes Update
 #Creating new columns for potholes counts and lengths for the two different year groupings.
 
@@ -853,7 +855,9 @@ EPCenterline_new8$dist_major_arterial <- as.numeric(as.character(EPCenterline_ne
 ```
 
 
-```{r EPCenterline data splits, message=FALSE, warning=FALSE}
+```{r EPCenterline data splits, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# SPLIT THE DATA
+
 # 2016-2018
 EPCenterline_2016to2018<- subset(EPCenterline_new8, select= -c(crash_count19_21, crash_len19_21, potholes_count19_21,potholes_len19_21))
 
@@ -862,6 +866,23 @@ EPCenterline_2019to2021 <- subset(EPCenterline_new8, select= -c(crash_count16_18
 
 ```
 
+```{r}
+# RENAME THE YEAR SPECIFIC COLUMNS TO BE NAMED THE SAME AFTER THE SPLIT
+
+EPCenterline_2016to2018 <- EPCenterline_2016to2018 %>%
+  dplyr::rename(crash_count= crash_count16_18,
+                crash_len = crash_len16_18,
+                potholes_count = potholes_count16_18,
+                potholes_len = potholes_len16_18)
+
+
+EPCenterline_2019to2021 <- EPCenterline_2019to2021 %>%
+  dplyr::rename(crash_count= crash_count19_21,
+                crash_len = crash_len19_21,
+                potholes_count = potholes_count19_21,
+                potholes_len = potholes_len19_21)
+
+```
 
 ### 4.4.1 Numeric Variable Correlations for 2016-2018 Grouping
 
@@ -869,7 +890,7 @@ EPCenterline_2019to2021 <- subset(EPCenterline_new8, select= -c(crash_count16_18
 numVars_PCI <-
   EPCenterline_2016to2018 %>%
   dplyr::select(VMT_pop, PCI_2018,
-    road_age, potholes_count16_18, crash_count16_18,
+    road_age, potholes_count, crash_count,
     #crash_len16_18, #potholes_len16_18, waze_len
     dist_hydro, dist_major_int) %>%
   st_drop_geometry() %>%
@@ -902,7 +923,7 @@ class_PCI<- EPCenterline_2016to2018[c('index','CLASS','PCI_2018')]
 
 class_PCI %>%
 ggplot(aes(CLASS, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#357BA2") +  
     labs(title = "Road Class vs. PCI",
          y="PCI Score in 2018",
          x="Road Class",
@@ -918,7 +939,7 @@ roadbed_base_PCI<- EPCenterline_2016to2018[c('index','rb_base','PCI_2018')]
 
 roadbed_base_PCI %>%
 ggplot(aes(rb_base, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#357BA2") +  
     labs(title = "Roadbed Base Material vs. PCI",
          y="PCI Score in 2018",
          x="Roadbed Base Material",
@@ -936,7 +957,7 @@ roadbed_surface_PCI<- EPCenterline_2016to2018[c('index','rb_surface','PCI_2018')
 
 roadbed_surface_PCI %>%
 ggplot(aes(rb_surface, PCI_2018)) +
-    geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+    geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#357BA2") +  
     labs(title = "Roadbed Surface Material vs. PCI",
          y="PCI Score in 2018",
          x="Roadbed Surface Material",
@@ -958,47 +979,57 @@ land_use_with_PCI$land_use_type = stringr::str_replace_all(land_use_with_PCI$lan
 
 land_use_with_PCI %>%
 ggplot(aes(land_use_type, PCI_2018)) +
-     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192b0") +  
+     geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#357BA2") +  
     labs(title = "Land Use vs. PCI",
          y="PCI Score in 2018",
          x="Land Use Type",
          subtitle = "Dataset: El Paso Land Use") +
   scale_x_discrete(labels = wrap_format(12)) + 
    plotTheme()
+
 ```
 
 ### 4.4.3 Variable Transformations
 
 Looking at the variable distributions, we decided to explore some transformations. We looking across the distributions of numeric variables to get a sense of how they each look.
 
-
-```{r distribution of predictors, message=FALSE, warning=FALSE}
-# Looking across the distributions of numeric variables to get a sense of how they each look
+```{r distribution of predictors, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# Looking across the distributions of numeric variables to get a sense of how they each look. Visualized below are a few of them.
 EP_model <- EPCenterline_2016to2018 %>% na.omit()
-hist(EP_model$crash_len16_18)
-hist(EP_model$potholes_len16_18)
 
-hist(EP_model$car_facility_nn3)
-hist(EP_model$entertainment_nn3)
-hist(EP_model$food_drink_nn3)
+#hist(EP_model$crash_len16_18)
+#hist(EP_model$potholes_len16_18)
 
-hist(EP_model$road_age)
-hist(EP_model$VMT_pop)
-hist(EP_model$dist_hydro)
-hist(EP_model$dist_major_int)
+#hist(EP_model$car_facility_nn3)
+#hist(EP_model$entertainment_nn3)
+#hist(EP_model$food_drink_nn3)
+
+hist1 <- ggplot(EP_model, aes(x=road_age)) + geom_histogram(fill="#357BA2") + plotTheme()
+hist2 <-  ggplot(EP_model, aes(x=VMT_pop)) + geom_histogram(fill="#357BA2") + plotTheme()
+hist3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
+hist4 <- ggplot(EP_model, aes(x=dist_major_int)) + geom_histogram(fill="#357BA2") + plotTheme()
+hist5 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
+hist6 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") + plotTheme() 
+
+hists <- c("hist1", "hist2", "hist3", "hist4", "hist5", "hist6")
+
+grid.arrange(hist1, hist2, hist3, hist4, hist5, hist6, ncol=3)
+
 ```
-
 
 Distributions: log transformations of crash length, potholes length, and distance to hydrology.
 
 ```{r log transformation, message=FALSE, warning=FALSE}
-EP_model$crash_len16_18 <- log(EP_model$crash_len16_18 + 2)
-hist(EP_model$crash_len16_18)
-EP_model$potholes_len16_18 <- log(EP_model$potholes_len16_18 + 2)
-hist(EP_model$potholes_len16_18)
+EP_model$crash_len <- log(EP_model$crash_len + 2)
+hist_log_1 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
+
+EP_model$potholes_len <- log(EP_model$potholes_len + 2)
+hist_log_2 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") + plotTheme()
 
 EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
-hist(EP_model$dist_hydro)
+hist_log_3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
+
+grid.arrange(hist_log_1, hist_log_2, hist_log_3, ncol=3)
 
 ```
 
@@ -1058,7 +1089,7 @@ We start with the basic linear regression model -- OLS model. We carefully selec
 
 # jenna added to OLS_reg1- this version has an interaction variable (road_age * CLASS); also added DISTRICT as a categorical variable
 OLS_reg1 <- 
-  lm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + VMT_pop + dist_hydro + dist_major_int + DISTRICT + car_facility_nn3 + entertainment_nn3 +
+  lm(PCI_2018 ~  crash_len + potholes_len + VMT_pop + dist_hydro + dist_major_int + DISTRICT + car_facility_nn3 + entertainment_nn3 +
      # CLASS + road_age +
     + land_use_type + floodzone_highrisk + road_age + CLASS + dist_major_arterial,
      data = EP_model_train)
@@ -1091,7 +1122,7 @@ fitControl <- trainControl(method = "cv", number = 100)
 set.seed(825)
 
 OLS_reg1.cv <- 
-  train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
+  train(PCI_2018 ~  crash_len + potholes_len + #waze_count + 
          car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
          road_age + VMT_pop + dist_hydro + dist_major_int + 
          # med_hh_income + pct_transport_to_work + pctWhite + 
@@ -1115,7 +1146,7 @@ Poisson regression assumes the dependent variable, in our case the PCI value, ha
 
 ```{r try poisson regression, message=FALSE, warning=FALSE, results='hide'}
 poisson_reg1 <- glm(formula = 
-                      PCI_2018 ~  crash_len16_18 + potholes_len16_18 + #waze_count + 
+                      PCI_2018 ~  crash_len + potholes_len + #waze_count + 
                        car_facility_nn3 + entertainment_nn3 + #food_drink_nn3 + 
                        road_age + VMT_pop + dist_hydro + dist_major_int + 
                        # med_hh_income + pct_transport_to_work + pctWhite + 
@@ -1150,7 +1181,7 @@ Here we set up two random forest models with the engineered features. We also se
 ### 5.4.1 Random Forest Model 1
 
 ```{r set up rf model1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-rf_model1 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+rf_model1 <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
                            car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                            road_age + VMT_pop + dist_hydro + dist_major_int + 
                            CLASS + land_use_type + 
@@ -1173,7 +1204,7 @@ importance(rf_model1)
 ### 5.4.2 Random Forest Model 2
 
 ```{r set up rf model2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-rf_model2 <- randomForest(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+rf_model2 <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
                            car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                            road_age + VMT_pop + dist_hydro + dist_major_int + 
                            CLASS + land_use_type + 
@@ -1257,7 +1288,7 @@ plot(rf_gridsearch)
 Support Vector Machine (SVM) is another type of powerful supervised machine learning algorithm which is generally applied in classification and regression. Here we built up SVM models with kernels `polynomial`, `radial`, and `sigmoid`. The best of three models returns MAPE of 47.13%, so we decide not to work with SVM further.
 
 ```{r set up svm model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-svm_reg1 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+svm_reg1 = svm(PCI_2018 ~  crash_len + potholes_len + 
                  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                  road_age + VMT_pop + dist_hydro + dist_major_int + 
                  CLASS + land_use_type + 
@@ -1291,7 +1322,7 @@ kable(svm1_acc) %>%
 ```
 
 ```{r set up svm model 2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-svm_reg2 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+svm_reg2 = svm(PCI_2018 ~  crash_len + potholes_len + 
                  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                  road_age + VMT_pop + dist_hydro + dist_major_int + 
                  CLASS + land_use_type + 
@@ -1326,7 +1357,7 @@ svm2_acc_table <- kable(svm2_acc) %>%
 ```
 
 ```{r set up svm model 3, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-svm_reg3 = svm(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
+svm_reg3 = svm(PCI_2018 ~  crash_len + potholes_len + 
                  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                  road_age + VMT_pop + dist_hydro + dist_major_int + 
                  CLASS + land_use_type + 
@@ -1370,7 +1401,7 @@ The tuned XGBoost model returns MAPE of 27.18%, similar to the Random Forest mod
 xgb_train <-
   EP_model %>% 
   subset(ind == 1) %>%
-  dplyr::select(PCI_2018, crash_len16_18, potholes_len16_18,  
+  dplyr::select(PCI_2018, crash_len, potholes_len,  
                  car_facility_nn3, entertainment_nn3, food_drink_nn3,  
                  road_age, VMT_pop, dist_hydro, dist_major_int,  
                  CLASS, land_use_type,  
@@ -1379,7 +1410,7 @@ xgb_train <-
 xgb_test <-
   EP_model %>% 
   subset(ind == 2) %>%
-  dplyr::select(PCI_2018, crash_len16_18, potholes_len16_18,  
+  dplyr::select(PCI_2018, crash_len, potholes_len,  
                  car_facility_nn3, entertainment_nn3, food_drink_nn3,  
                  road_age, VMT_pop, dist_hydro, dist_major_int,  
                  CLASS, land_use_type,  
@@ -1740,7 +1771,7 @@ rf1_preds_acc_table
 
 ```{r ensemble model 2 -- road network}
 rf_enmodel2 <- randomForest(PCI_2018 ~  (road_age * CLASS) + dist_major_int + 
-                              crash_len16_18 + dist_major_arterial,
+                              crash_len + dist_major_arterial,
                          data = EP_model_train, 
                          ntree=750,
                          mtry=3,
@@ -1768,7 +1799,7 @@ rf2_preds_acc_table
 ```
 
 ```{r ensemble model 3 -- road conditions}
-rf_enmodel3 <- randomForest(PCI_2018 ~  rb_base + rb_surface + potholes_len16_18,
+rf_enmodel3 <- randomForest(PCI_2018 ~  rb_base + rb_surface + potholes_len,
                          data = EP_model_train, 
                          ntree=750,
                          mtry=3,
@@ -1890,4 +1921,34 @@ ggplot(aes(PCI_2018, rf_absError)) +
 ```
 
 
+## Predicting for 2021
+
+```{r}
+#preds <- predict(rf_model1, EPCenterline_2019to2021, type="response") %>% as.data.frame()
+
+EP_model_predictions_2021 <- 
+  EPCenterline_2019to2021 %>%
+  mutate(predictions = round(predict(rf_model1, EPCenterline_2019to2021)))
+
+```
+
+```{r}
+ggplot()+
+  geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
+  geom_sf(data = EP_model_predictions_2021, aes(color = predictions)) +
+  scale_color_viridis(option='G', direction=-1)+
+  labs(title = "Predicted PCI for 2021",
+       color="PCI",
+       subtitle = "El Paso, TX") + mapTheme()
+```
+
+what's up with the NAs?
+```{r}
+table(is.na(EP_model_predictions_2021$predictions))
+
+```
+
+```{r}
+EP_model_predictions_2021_nas <- EP_model_predictions_2021 %>% filter(is.na(EP_model_predictions_2021$predictions))
+```
 
