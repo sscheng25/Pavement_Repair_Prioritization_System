@@ -115,14 +115,12 @@ plotTheme <- function(base_size = 12) {
 #Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
 
 # RData from EDA part, please make sure to run this properly
-load("Data/EDA2.RData")
+#load("Data/EDA2.RData")
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-#load("Data/modelling_0325.RData")
+load("Data/beforeModel.RData")
 
-# latest version containing all RF models
-#load("Data/0412-2.RData")
 ```
 
 # 1. Project Introduction
