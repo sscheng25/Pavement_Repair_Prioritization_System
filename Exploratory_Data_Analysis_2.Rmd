@@ -1600,8 +1600,8 @@ At this point we merge the land use data with the centerline data so that each o
 
 ```{r land use join to road segments, message=FALSE, warning=FALSE}
 land_use_centerlines <- 
-  EPCenterline_new %>%
-  st_join(land_use_majority_sf)
+  EPCenterline_new3 %>%
+  st_intersection(land_use_majority_sf)
 
 land_use_with_PCI_GEOID <- land_use_centerlines %>%
   st_drop_geometry()%>%
