@@ -115,11 +115,11 @@ plotTheme <- function(base_size = 12) {
 #Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
 
 # RData from EDA part, please make sure to run this properly
-load("Data/EDA.RData")
+load("Data/EDA2.RData")
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-load("Data/modelling_0325.RData")
+#load("Data/modelling_0325.RData")
 
 # latest version containing all RF models
 #load("Data/0412-2.RData")
@@ -584,7 +584,7 @@ At this point, we also calculate the third nearest neighbors to use as the engin
 
 We obtained the new preliminary FEMA flood zone maps from the City of El Paso.
 
-```{r bring in the 2020 preliminary flood zone data and clip, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r bring in the 2020 preliminary flood zone data and clip, eval=FALSE, message=FALSE, warning=FALSE}
 prelim_floodzones_2020 <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp" )%>%
   st_transform('ESRI:102339')
 
@@ -617,7 +617,7 @@ EPCenterline_new6 <-
 
 ### 4.3.7 Crashes
 
-```{r udpated crash data according to year, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r udpated crash data according to year, eval=FALSE, message=FALSE, warning=FALSE}
 #read in new data
 crash16 <- st_read("Data/CRIS2016/CRIS2016.shp")
 crash17<- st_read("Data/CRIS2017/CRIS2017.shp")
@@ -723,18 +723,20 @@ Add new plots.
 
 #get rid of duplicates - selecting first value of the group (duplicates have same value)
 roadbed_base_PCI <- roadbed_base_PCI %>%
+  rename(rb_base = BASE_TYPE_) %>%
   group_by(index)%>%
   summarize(rb_base = first(rb_base))
 
 roadbed_surface_PCI <- roadbed_surface_PCI %>%
+  rename(rb_surface = SRFC_TYPE) %>%
   group_by(index)%>%
   summarize(rb_surface = first(rb_surface))
 
 roadbed_surface_PCI$rb_surface <- str_to_title(roadbed_surface_PCI$rb_surface)
 
 #join to EPCenterline_new6
-EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_base_PCI, on="index")
-EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_surface_PCI, on="index")
+EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_base_PCI %>% st_drop_geometry(), on="index")
+EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_surface_PCI %>% st_drop_geometry(), on="index")
 
 #change NA values to unknown category
 EPCenterline_new6[,c("rb_base","rb_surface")][is.na(EPCenterline_new6[,c("rb_base","rb_surface")])] <- "Unknown"
@@ -745,7 +747,7 @@ EPCenterline_new6[,c("rb_base","rb_surface")][is.na(EPCenterline_new6[,c("rb_bas
 #Creating new columns for potholes counts and lengths for the two different year groupings.
 
 #drop old columns
-EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(potholes_count,potholes_len))
+EPCenterline_new6 <- subset(EPCenterline_new6, select= -c(potholes_count, potholes_len))
 
 #clean up potholes grouping dfs
 potholes_sf_2016to2018 <- subset(potholes_sf_2016to2018, select= c(YEAR, geometry, WORKORDERID))
@@ -831,7 +833,7 @@ EPCenterline_new7$dist_major_int <- as.numeric(as.character(EPCenterline_new7$di
 EPCenterline_new7$pave_length <- as.numeric(as.character(EPCenterline_new7$pave_length))
 
 # NEW - additional data cleanup
-EPCenterline_new7 <- EPCenterline_new7 %>% select(-CNTY_SEAT_FLAG)
+EPCenterline_new7 <- EPCenterline_new7 %>% dplyr::select(-CNTY_SEAT_FLAG)
 
 #EPCenterline_new8 created
 EPCenterline_new8 <- 
@@ -866,7 +868,7 @@ EPCenterline_2019to2021 <- subset(EPCenterline_new8, select= -c(crash_count16_18
 
 ```
 
-```{r}
+```{r RENAME}
 # RENAME THE YEAR SPECIFIC COLUMNS TO BE NAMED THE SAME AFTER THE SPLIT
 
 EPCenterline_2016to2018 <- EPCenterline_2016to2018 %>%
@@ -1020,16 +1022,16 @@ grid.arrange(hist1, hist2, hist3, hist4, hist5, hist6, ncol=3)
 Distributions: log transformations of crash length, potholes length, and distance to hydrology.
 
 ```{r log transformation, message=FALSE, warning=FALSE}
-EP_model$crash_len <- log(EP_model$crash_len + 2)
-hist_log_1 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
+#EP_model$crash_len <- log(EP_model$crash_len + 2)
+#hist_log_1 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
 
-EP_model$potholes_len <- log(EP_model$potholes_len + 2)
-hist_log_2 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") + plotTheme()
+#EP_model$potholes_len <- log(EP_model$potholes_len + 2)
+#hist_log_2 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") + plotTheme()
 
-EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
-hist_log_3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
+#EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
+#hist_log_3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
 
-grid.arrange(hist_log_1, hist_log_2, hist_log_3, ncol=3)
+#grid.arrange(hist_log_1, hist_log_2, hist_log_3, ncol=3)
 
 ```
 
