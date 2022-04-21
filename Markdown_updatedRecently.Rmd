@@ -1404,8 +1404,8 @@ xgb_train <-
   dplyr::select(PCI_2018, crash_len, potholes_len,  
                  car_facility_nn3, entertainment_nn3, food_drink_nn3,  
                  road_age, VMT_pop, dist_hydro, dist_major_int,  
-                 CLASS, land_use_type,  
-                 #rb_base, rb_surface, 
+                 CLASS, land_use_type, dist_major_arterial,
+                 rb_base, rb_surface, 
                  floodzone_highrisk, ind)
 xgb_test <-
   EP_model %>% 
@@ -1413,8 +1413,8 @@ xgb_test <-
   dplyr::select(PCI_2018, crash_len, potholes_len,  
                  car_facility_nn3, entertainment_nn3, food_drink_nn3,  
                  road_age, VMT_pop, dist_hydro, dist_major_int,  
-                 CLASS, land_use_type,  
-                 #rb_base, rb_surface, 
+                 CLASS, land_use_type,  dist_major_arterial,
+                 rb_base, rb_surface, 
                  floodzone_highrisk, ind)
 
 xgb_all = rbind(xgb_train,xgb_test)
@@ -1422,8 +1422,8 @@ xgb_all = rbind(xgb_train,xgb_test)
 
 ```{r one hot encoding, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # one hot encoding
-ohe_feats = c('CLASS', 'land_use_type', 'floodzone_highrisk')
-dummies <- dummyVars(~ CLASS +  land_use_type + floodzone_highrisk, data = xgb_all)
+ohe_feats = c('CLASS', 'land_use_type', 'floodzone_highrisk', 'rb_base', 'rb_surface')
+dummies <- dummyVars(~ CLASS +  land_use_type + floodzone_highrisk + rb_base + rb_surface, data = xgb_all)
 
 xgb_ohe <- as.data.frame(predict(dummies, newdata = xgb_all))
 xgb_combined <- cbind(xgb_all[,-c(which(colnames(xgb_all) %in% ohe_feats))], xgb_ohe)
@@ -1631,7 +1631,7 @@ ggplot()+
   mapTheme()
 
 # NAME_census
-test <- sub("\\..*", "", EP_model_rf1$NAME_census)
+#test <- sub("\\..*", "", EP_model_rf1$NAME_census)
 EP_model_rf1$NAME_census2 <- gsub(",.*$", "", test)
 
 EP_model_rf1_plot <-
