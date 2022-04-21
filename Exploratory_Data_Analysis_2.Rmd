@@ -1500,7 +1500,7 @@ We also merge the VMT layer to the EPCenterline data frame.
 ```{r merging VMT data into EPCenterline_new, message=FALSE, warning=FALSE}
 VMT_centerlines <- 
   EPCenterline_new %>%
-  st_join(VMT_sf)
+  st_intersection(VMT_sf)
 
 VMT_with_PCI_GEOID <- VMT_centerlines %>%
   st_drop_geometry()%>%
