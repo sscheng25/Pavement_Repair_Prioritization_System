@@ -121,13 +121,19 @@ PCI2018 <- EPCenterline_new6%>%
   dplyr::select(PCI_2018)
 
 #writing out the file as a geojson
-st_write(PCI2018, "PCI2018.geojson")
+#st_write(PCI2018, "PCI2018.geojson")
 ```
 
-# Load equity score data
+# Load equity layer
 
-```{r}
+```{r equity layer}
+EquityLayer <- st_read("ApplicationDevelopment/AppData/EquityLayer/Equity_12_11_2020/Equity_12_11_2020.shp")%>%
+  st_transform('ESRI:102339')%>%
+  dplyr::select('Total_Equi')%>%
+  mutate("Total Equity" = Total_Equi)%>%
+  dplyr::select('Total Equity')
 
+st_write(EquityLayer, "EquityLayer.geojson")
 ```
 
 
