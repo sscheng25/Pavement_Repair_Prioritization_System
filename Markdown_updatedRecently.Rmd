@@ -1211,7 +1211,7 @@ rf_model2 <- randomForest(PCI_2018 ~  crash_len + potholes_len +
                            rb_base + rb_surface +
                            floodzone_highrisk + dist_major_arterial,
                          data = EP_model_train, 
-                         ntree=2000,
+                         ntree=1000,
                          mtry=15,
                          bootstrap=F)
 
@@ -1288,7 +1288,7 @@ plot(rf_gridsearch)
 Support Vector Machine (SVM) is another type of powerful supervised machine learning algorithm which is generally applied in classification and regression. Here we built up SVM models with kernels `polynomial`, `radial`, and `sigmoid`. The best of three models returns MAPE of 47.13%, so we decide not to work with SVM further.
 
 ```{r set up svm model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-svm_reg1 = svm(PCI_2018 ~  crash_len + potholes_len + 
+svm_reg1 <- svm(PCI_2018 ~  crash_len + potholes_len + 
                  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                  road_age + VMT_pop + dist_hydro + dist_major_int + 
                  CLASS + land_use_type + 
@@ -1322,7 +1322,7 @@ kable(svm1_acc) %>%
 ```
 
 ```{r set up svm model 2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-svm_reg2 = svm(PCI_2018 ~  crash_len + potholes_len + 
+svm_reg2 <- svm(PCI_2018 ~  crash_len + potholes_len + 
                  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                  road_age + VMT_pop + dist_hydro + dist_major_int + 
                  CLASS + land_use_type + 
