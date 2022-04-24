@@ -820,6 +820,32 @@ EPCenterline_new7 <- EPCenterline_new6 %>%
   mutate(dist_major_arterial = st_distance(EPCenterline_new6, major_arterials[nearest_major_arterial,], by_element=TRUE))
 ```
 
+### 4.3.9 
+```{r import shp for interstate bound}
+interstateBound <- st_read("Data/Interstate10Bound/Interstate10Bound.shp") %>%
+  st_transform('ESRI:102339')
+
+ggplot() +
+  geom_sf(data = interstateBound)
+```
+
+```{r}
+EPCenterline_bound <- 
+  EPCenterline_new7 %>%
+  st_intersection(interstateBound) %>%
+  mutate(interstateBound = 1) %>%
+  st_drop_geometry() %>%
+  dplyr::select(index, interstateBound)
+
+EPCenterline_new7 <-
+  EPCenterline_new7 %>%
+  merge(EPCenterline_bound, by="index",all.x=TRUE)
+
+EPCenterline_new7$interstateBound[is.na(EPCenterline_new7$interstateBound)] <- 0
+  
+```
+
+
 ## 4.4 Variable Relationships
 
 We split data according to year groupings before running some correlations analyses to understand relationships between PCI and our features.
@@ -1091,7 +1117,7 @@ We start with the basic linear regression model -- OLS model. We carefully selec
 OLS_reg1 <- 
   lm(PCI_2018 ~  crash_len + potholes_len + VMT_pop + dist_hydro + dist_major_int + DISTRICT + car_facility_nn3 + entertainment_nn3 +
      # CLASS + road_age +
-    + land_use_type + floodzone_highrisk + road_age + CLASS + dist_major_arterial,
+    + land_use_type + floodzone_highrisk + road_age + CLASS + dist_major_arterial + interstateBound,
      data = EP_model_train)
 
 stargazer(OLS_reg1, type = "text",title = "OLS Regression Results", align=TRUE, no.space=TRUE)
@@ -1186,7 +1212,7 @@ rf_model1 <- randomForest(PCI_2018 ~  crash_len + potholes_len +
                            road_age + VMT_pop + dist_hydro + dist_major_int + 
                            CLASS + land_use_type + 
                            rb_base + rb_surface +
-                           floodzone_highrisk + dist_major_arterial,
+                           floodzone_highrisk + dist_major_arterial + interstateBound,
                          data = EP_model_train, 
                          ntree=750,
                          mtry=15,
@@ -1405,7 +1431,7 @@ xgb_train <-
                  car_facility_nn3, entertainment_nn3, food_drink_nn3,  
                  road_age, VMT_pop, dist_hydro, dist_major_int,  
                  CLASS, land_use_type, dist_major_arterial,
-                 rb_base, rb_surface, 
+                 rb_base, rb_surface, interstateBound, 
                  floodzone_highrisk, ind)
 xgb_test <-
   EP_model %>% 
@@ -1414,7 +1440,7 @@ xgb_test <-
                  car_facility_nn3, entertainment_nn3, food_drink_nn3,  
                  road_age, VMT_pop, dist_hydro, dist_major_int,  
                  CLASS, land_use_type,  dist_major_arterial,
-                 rb_base, rb_surface, 
+                 rb_base, rb_surface, interstateBound, 
                  floodzone_highrisk, ind)
 
 xgb_all = rbind(xgb_train,xgb_test)
@@ -1542,7 +1568,7 @@ for (j in 1:nrow(hyper_grid)) {
 
 ```
 
-## 5.7 Visualizing Selected Model Results
+## 5.7 Model Cross Validation
 
 We decide go forth with additional refinement of the random forest and XGBoost models. We carefully examine their model results and error distributions among categorical groups and numeric variables.
 
@@ -1608,6 +1634,15 @@ ggplot(aes(rf_absError, land_use_type)) +
          y="Land Use Type",
        subtitle = "Random Forest")  + 
   plotTheme()
+
+EP_model_rf1 %>%
+ggplot(aes(rf_absError, PLANAREA)) +
+  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
+  labs(title = "Absolute Error vs. Plan Area",
+         x="Absolute Error",
+         y="Planning Area",
+       subtitle = "Random Forest")  + 
+  plotTheme()
 ```
 
 ```{r RF result distribution 2}
@@ -1631,8 +1666,8 @@ ggplot()+
   mapTheme()
 
 # NAME_census
-#test <- sub("\\..*", "", EP_model_rf1$NAME_census)
-EP_model_rf1$NAME_census2 <- gsub(",.*$", "", test)
+subset <- sub("\\..*", "", EP_model_rf1$NAME_census)
+EP_model_rf1$NAME_census2 <- gsub(",.*$", "", subset)
 
 EP_model_rf1_plot <-
   EP_model_rf1 %>%
@@ -1742,7 +1777,7 @@ _JE NOTE: Explain/give brief intro to ensemble modeling_
 
 ```{r ensemble model 1 -- built environment}
 rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
-                           VMT_pop + dist_hydro + land_use_type + floodzone_highrisk,
+                           VMT_pop + dist_hydro + land_use_type + floodzone_highrisk + interstateBound,
                          data = EP_model_train, 
                          ntree=750,
                          mtry=6,
@@ -1921,9 +1956,11 @@ ggplot(aes(PCI_2018, rf_absError)) +
 ```
 
 
-## Predicting for 2021
+## 6. Prediction
 
-```{r}
+### 6.1 Prediction for PCI 2021
+
+```{r PCI prediction for 2021}
 #preds <- predict(rf_model1, EPCenterline_2019to2021, type="response") %>% as.data.frame()
 
 EP_model_predictions_2021 <- 
@@ -1932,7 +1969,7 @@ EP_model_predictions_2021 <-
 
 ```
 
-```{r}
+```{r plot predicted PCIs}
 ggplot()+
   geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
   geom_sf(data = EP_model_predictions_2021, aes(color = predictions)) +
@@ -1943,12 +1980,12 @@ ggplot()+
 ```
 
 what's up with the NAs?
-```{r}
+```{r examine na dataframe}
 table(is.na(EP_model_predictions_2021$predictions))
-
-```
-
-```{r}
 EP_model_predictions_2021_nas <- EP_model_predictions_2021 %>% filter(is.na(EP_model_predictions_2021$predictions))
 ```
+
+
+
+
 
