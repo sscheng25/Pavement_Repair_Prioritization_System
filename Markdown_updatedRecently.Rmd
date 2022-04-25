@@ -119,7 +119,7 @@ plotTheme <- function(base_size = 12) {
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-load("Data/beforeModel.RData")
+load("Data/New_feature_model.RData")
 
 ```
 
@@ -216,14 +216,15 @@ _Internal Note for Jenna: Check EPCenterline_final to check which other base lay
 
 We extracted data from US Census datasets, including the American Community Survey (ACS) and TIGER/Lines national datasets, during our feature engineering process. 
 
-_NOTE: While demographic and socioeconomic data from the ACES was not ultimately included in our model, it is useful for understanding the project context._
+_Note that while demographic and socioeconomic data from the ACES was not ultimately included in our model, it is useful for understanding the project context._
+
+_JE NOTE: Kristin editing Census section text_
 
 ### 4.2.1 El Paso Demographics (Race, Ethnicity, Age data from 2019 5yr ACS)
 
 To get a better sense of the population that the roads are servicing, we take a look at the residents' race, ethnicity, and age group through the ACS 2019 5-year dataset.
 
 Taking a look at the population pyramid, we can tell the age structure of El Paso city tends to be young, and the working age population accounts for a large proportion of the total population, which means there is a high everyday commute demand in our study area.
-
 
 
 ```{r plot the poplation pyramid, message=FALSE, warning=FALSE}
@@ -272,7 +273,7 @@ ggplot()+
   labs(title="Percent Hispanic or Latino in 2019",
        fill="% Hispanic \nor Latino",
        subtitle="Census Tracts in El Paso, TX",
-       caption = "Source: US Census, ACS 2019\nGray ") + mapTheme()
+       caption = "Source: US Census, ACS 2019\n\nNote: Gray tracts indicate no data") + mapTheme()
 
 ```
 
@@ -476,7 +477,7 @@ ggplot() +
 
 Again we can see that there is majority developed area across the city, with a focus particularly on single-family residential areas.
 
-```{r land use ggplots, message=FALSE, warning=FALSE}
+```{r land use ggplot1, message=FALSE, warning=FALSE}
 ggplot() +
   geom_sf(data = land_use_majority_sf, aes(fill = land_use_type), color="grey") +
   scale_fill_viridis_d(option="mako", direction=-1) +
@@ -486,6 +487,9 @@ ggplot() +
        subtitle = "El Paso, TX") +
   mapTheme()
 
+```
+
+```{r kabd yse ggplot2, nessage=FALSE, warning=FALSE}
 ggplot(land_use_majority_sf, aes(y=land_use_type)) +
   geom_bar(width=0.5, color="black", fill = "#357BA2") +
   labs(title = "Land Use by Census Tract",
@@ -494,8 +498,8 @@ ggplot(land_use_majority_sf, aes(y=land_use_type)) +
        subtitle = "El Paso, TX",
        caption="Source: City of El Paso, TX") +
   plotTheme()
-
 ```
+
 
 ### 4.3.5 OpenStreetMap Amenities
 
@@ -550,8 +554,6 @@ EPCenterline_new6 <-
 ```
 
 ```{r osm amenities maps, message=FALSE, warning=FALSE}
-#palette_5_mako <- c("#0B0405", "#3E356B", "#357BA2", "#49C1AD", "#DEF5E5")
-
 osm_fooddrink_map <- ggplot() +
   geom_sf(data = El_Paso_city, color = "grey") +
   geom_sf(data = am_food_drink, aes(), color="#3E356B", size=0.75, show.legend = "point") +
@@ -576,11 +578,11 @@ osm_carfacility_map <- ggplot() +
 grid.arrange(osm_fooddrink_map, osm_entertainment_map, osm_carfacility_map, ncol=3, top="Select OpenStreetMap Amenities")
 ```
 
-At this point, we also calculate the third nearest neighbors to use as the engineered features. _JE NOTE: add more on why we chose to do 3rd_
+At this point, we also calculate the third nearest neighbors to use as the engineered features. _JE NOTE: sisunm can you add more on why we chose to do 3rd?_
 
 ### 4.3.6 High Risk Flood Zones
 
-We obtained the new preliminary FEMA flood zone maps from the City of El Paso.
+We obtained the new preliminary FEMA flood zone maps from the City of El Paso. We engineered a binary feature to capture whether each road segment is situated at all within one of the flood zones denoted with the "special flood hazard area" classification.
 
 ```{r bring in the 2020 preliminary flood zone data and clip, eval=FALSE, message=FALSE, warning=FALSE}
 prelim_floodzones_2020 <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp" )%>%
@@ -705,9 +707,9 @@ EPCenterline_new6$crash_len19_21 <- as.numeric(as.character(EPCenterline_new6$cr
 
 ### 4.3.8 Roadbed Features
 
-Add new plots.
+_JE NOTE: we need to add new plots and text - anything here aroudn why things are mostly "unknown" ?_
 
-```{r join roadbed feats to centerlines, message=TRUE, warning=TRUE}
+```{r join roadbed feats to centerlines, eval=FALSE, message=TRUE, warning=TRUE, include=FALSE}
 #rename target column and drop unneccessary columns
 #roadbed_base_PCI <- roadbed_base_PCI %>%
 #  mutate(rb_base = BASE_TYPE_)%>%
@@ -739,6 +741,18 @@ EPCenterline_new6 <- left_join(EPCenterline_new6, roadbed_surface_PCI %>% st_dro
 #change NA values to unknown category
 EPCenterline_new6[,c("rb_base","rb_surface")][is.na(EPCenterline_new6[,c("rb_base","rb_surface")])] <- "Unknown"
 ```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(EPCenterline_new8, aes(y=rb_base)) +
+  geom_bar(width=0.5, color="black", fill = "#357BA2") +
+  labs(title = "Roadbed Base Types",
+       y="Type",
+       x="Count",
+       subtitle = "El Paso, TX",
+       caption="Source: City of El Paso, TX") +
+  plotTheme()
+```
+
 
 ```{r update potholes feature, message=FALSE, warning=FALSE}
 ## Potholes Update
@@ -804,7 +818,30 @@ EPCenterline_new6 <-
 EPCenterline_new6$potholes_len19_21 <- as.numeric(as.character(EPCenterline_new6$potholes_len19_21))
 ```
 
-```{r add functional classification data, message=FALSE, warning=FALSE}
+
+### 4.3.9 Distances to Major Intersections and Arterials
+
+_JE NOTE: Text here!!!_
+
+
+```{r}
+# code for wrangling dist major int - can't find it
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent",  color="grey") +
+  geom_sf(data = EPCenterline_new8, aes(color = dist_major_int), size=0.5) +
+  scale_color_viridis(option="mako", direction=-1) +
+                     labs(title = "Distance to Major Intersection",
+       color= "Distance (ft)",
+        caption="Engineered using data from TxDOT and City of El Paso, TX",
+       subtitle = "El Paso, TX") +
+  mapTheme()
+```
+
+
+```{r add functional classification data, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 func_class <- st_read("Data/ElPaso_Func_Class/ElPaso_Func_Class.shp")%>%
   st_transform('ESRI:102339')
 
@@ -820,16 +857,32 @@ EPCenterline_new7 <- EPCenterline_new6 %>%
   mutate(dist_major_arterial = st_distance(EPCenterline_new6, major_arterials[nearest_major_arterial,], by_element=TRUE))
 ```
 
-### 4.3.9 
-```{r import shp for interstate bound}
+```{r dist maj arterial ggplot, message=FALSE, warning=TRUE}
+ggplot() +
+  geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
+  geom_sf(data = EPCenterline_new8, aes(color = dist_major_arterial), size=0.5) +
+  scale_color_viridis(option="mako", direction=-1) +
+                     labs(title = "Distance to Major Arterial",
+       color= "Distance (ft)",
+        caption="Engineered using data from TxDOT and City of El Paso, TX",
+       subtitle = "El Paso, TX") +
+  mapTheme()
+```
+
+### 4.3.10 Proximity to Interstate 10
+
+_JE NOTE: add text from script to this_
+
+```{r import shp for interstate bound, message=FALSE, warning=FALSE}
 interstateBound <- st_read("Data/Interstate10Bound/Interstate10Bound.shp") %>%
   st_transform('ESRI:102339')
 
 ggplot() +
-  geom_sf(data = interstateBound)
+  geom_sf(data = interstateBound) + mapTheme()
 ```
 
-```{r}
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# Code used for feature generation
 EPCenterline_bound <- 
   EPCenterline_new7 %>%
   st_intersection(interstateBound) %>%
@@ -857,7 +910,7 @@ EPCenterline_new7$dist_major_int <- as.numeric(as.character(EPCenterline_new7$di
 EPCenterline_new7$pave_length <- as.numeric(as.character(EPCenterline_new7$pave_length))
 
 # NEW - additional data cleanup
-EPCenterline_new7 <- EPCenterline_new7 %>% dplyr::select(-CNTY_SEAT_FLAG)
+#EPCenterline_new7 <- EPCenterline_new7 %>% dplyr::select(-CNTY_SEAT_FLAG)
 
 #EPCenterline_new8 created
 EPCenterline_new8 <- 
@@ -910,6 +963,7 @@ EPCenterline_2019to2021 <- EPCenterline_2019to2021 %>%
 
 ```
 
+
 ### 4.4.1 Numeric Variable Correlations for 2016-2018 Grouping
 
 ```{r Numeric Correlations with PCI, warning=FALSE}
@@ -934,6 +988,7 @@ numVars_PCI %>%
   plotTheme()
 
 ```
+_JE NOTE: need to make a table for these results as well_
 
 ### 4.4.2 Categorical Correlations with PCI
 
@@ -941,7 +996,7 @@ We also examine the correlations of PCI values and some categorical variables.
 
 #### Road Class and PCI
 
-When it comes to the road class of pavement segments in the EPCenterline dataset, there is no obvious difference between different road classes. Thus, road class might not be a useful variable in our model.
+When it comes to the road class of pavement segments in the dataset, there is no obvious difference between different road classes. Thus, road class might not be a useful variable in our model.
 
 ```{r class pci correlation, message=FALSE, warning=FALSE}
 
@@ -1031,7 +1086,7 @@ EP_model <- EPCenterline_2016to2018 %>% na.omit()
 #hist(EP_model$food_drink_nn3)
 
 hist1 <- ggplot(EP_model, aes(x=road_age)) + geom_histogram(fill="#357BA2") + plotTheme()
-hist2 <-  ggplot(EP_model, aes(x=VMT_pop)) + geom_histogram(fill="#357BA2") + plotTheme()
+hist2 <-ggplot(EP_model, aes(x=VMT_pop)) + geom_histogram(fill="#357BA2") + plotTheme()
 hist3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
 hist4 <- ggplot(EP_model, aes(x=dist_major_int)) + geom_histogram(fill="#357BA2") + plotTheme()
 hist5 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
@@ -1039,33 +1094,35 @@ hist6 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") 
 
 hists <- c("hist1", "hist2", "hist3", "hist4", "hist5", "hist6")
 
-grid.arrange(hist1, hist2, hist3, hist4, hist5, hist6, ncol=3)
-
 ```
 
-Distributions: log transformations of crash length, potholes length, and distance to hydrology.
+```{r message=FALSE, warning=FALSE}
+grid.arrange(hist1, hist2, hist3, hist4, hist5, hist6, ncol=3)
+```
+
+After examining these distributions, we applied log transformations to crash length, potholes length, and distance to hydrology.
+_JE NOTE: why did we decide not to use log transformations again? Sisun?_
 
 ```{r log transformation, message=FALSE, warning=FALSE}
-#EP_model$crash_len <- log(EP_model$crash_len + 2)
-#hist_log_1 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
+EP_model$crash_len <- log(EP_model$crash_len + 2)
+hist_log_1 <- ggplot(EP_model, aes(x=crash_len)) + geom_histogram(fill="#357BA2") + plotTheme()
 
-#EP_model$potholes_len <- log(EP_model$potholes_len + 2)
-#hist_log_2 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") + plotTheme()
+EP_model$potholes_len <- log(EP_model$potholes_len + 2)
+hist_log_2 <- ggplot(EP_model, aes(x=potholes_len)) + geom_histogram(fill="#357BA2") + plotTheme()
 
-#EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
-#hist_log_3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
+EP_model$dist_hydro <- log(as.numeric(EP_model$dist_hydro) + 2)
+hist_log_3 <- ggplot(EP_model, aes(x=dist_hydro)) + geom_histogram(fill="#357BA2") + plotTheme()
 
-#grid.arrange(hist_log_1, hist_log_2, hist_log_3, ncol=3)
+grid.arrange(hist_log_1, hist_log_2, hist_log_3, ncol=3)
 
 ```
-
 
 
 # 5. Modeling
 
-## 5.1 Split to train and test set
+## 5.1 Train-Test Data Split
 
-Before we start building the predition models, we randomly split our existing dataset into a training set (70%) and a test set (30%).
+Before we start building the prediction models, we randomly split our existing dataset for 2016-2018 into a training set (70%) and a test set (30%).
 
 ```{r split the data to train and test set, message=FALSE, warning=FALSE, results='hide'}
 set.seed(111)
@@ -1085,7 +1142,7 @@ EP_model_test <-
 
 ## 5.2 OLS Regression
 
-We start with the basic linear regression model -- OLS model. We carefully selected numeric and categorical features and built up OLS_reg1 as follows. The OLS regression has a Mean Absolute Percent Error (MAPE) of 39.60%, which is not very satisfying.
+We start with the basic linear regression model - the OLS model. We carefully selected numeric and categorical features and built up `OLS_reg1` as follows. The OLS regression has a Mean Absolute Percent Error (MAPE) of 39.60%, which is not very satisfying.
 
 ```{r start with linear regression, message=FALSE, warning=FALSE, results='hide'}
 # OLS_reg1 <- 
@@ -1111,7 +1168,6 @@ We start with the basic linear regression model -- OLS model. We carefully selec
 # acc <- data.frame(MAE, MAPE)
 # ols_acc_table <- kable(acc) %>% 
 #   kable_styling(full_width = F)
-# 
 
 # jenna added to OLS_reg1- this version has an interaction variable (road_age * CLASS); also added DISTRICT as a categorical variable
 OLS_reg1 <- 
@@ -1133,12 +1189,15 @@ EP_model_OLS <-
 MAE <- mean(EP_model_OLS$PCI.AbsError, na.rm = T)
 MAPE <- mean(EP_model_OLS$PCI.APE, na.rm = T)
 acc <- data.frame(MAE, MAPE)
-ols_acc_table <- kable(acc) %>% 
+ols_acc_table <- kable(acc, caption = "OLS Error Metrics") %>% 
   kable_styling(full_width = F)
 
-
-ols_acc_table 
 ```
+
+```{r ols_acc_table, message=FALSE, warning=FALSE}
+ols_acc_table
+```
+
 
 To test the generalizability of our OLS regression model, we applied k-fold cross validation. The distribution of MAE cluster quite tightly together (most of which are from 16 to 19 approximately), and this suggest that the model have a quite good generalizability.
 
@@ -1162,7 +1221,7 @@ OLS_reg1.cv$resample[1:10,]
 MAE_reg <- OLS_reg1.cv$resample
 ggplot(MAE_reg, aes(MAE)) + 
   geom_histogram(color="black", binwidth = 0.2, fill="#5192B0") +
-  labs(title = "Histogram of MAEs of Cross Validation", subtitle = "OLS regression",  x = "MAE", y= "Count") +
+  labs(title = "Histogram of MAEs of Cross Validation", subtitle = "OLS regression",  x = "Mean Absolute Error (MAE)", y= "Count") +
   plotTheme()
 ```
 
@@ -1191,7 +1250,7 @@ EP_model_poisson <-
 poisson_MAE <- mean(EP_model_poisson$PCI.AbsError, na.rm = T)
 poisson_MAPE <- mean(EP_model_poisson$PCI.APE, na.rm = T)
 poisson_acc <- data.frame(poisson_MAE, poisson_MAPE)
-poisson_acc_table <- kable(poisson_acc) %>% 
+poisson_acc_table <- kable(poisson_acc, caption="Poisson Error Metrics") %>% 
   kable_styling(full_width = F)
 
 poisson_acc_table
@@ -1224,10 +1283,12 @@ importance(rf_model1)
 ```
 
 ```{r rfmodel1importance, echo=FALSE}
-importance(rf_model1)
+importance(rf_model1) %>% kable(caption="Random Forest Model 1 Feature Importances") %>% kable_styling()
 ```
 
 ### 5.4.2 Random Forest Model 2
+
+_JE NOTE: Sisun, can you explain the different feature selection for this RF model compared to the first one?_
 
 ```{r set up rf model2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 rf_model2 <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
@@ -1245,7 +1306,7 @@ rf_model2 <- randomForest(PCI_2018 ~  crash_len + potholes_len +
 
 ```{r rfmodel2importance, echo=FALSE}
 rf_model2
-importance(rf_model2)
+importance(rf_model2) %>% kable(caption="Random Forest Model 2 Feature Importances") %>% kable_styling()
 ```
 
 ```{r prediction with rf model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
@@ -1258,12 +1319,12 @@ EP_model_rf1 <-
 
 ```
 
-```{r rf 1 result}
+```{r rf 1 result, warning=FALSE}
 
 rf1_preds_MAE <- mean(EP_model_rf1$rf_absError, na.rm = T)
 rf1_preds_MAPE <- mean(EP_model_rf1$rf_APE, na.rm = T)
 rf1_preds_acc <- data.frame(rf1_preds_MAE, rf1_preds_MAPE)
-rf1_preds_acc_table <- kable(rf1_preds_acc) %>% 
+rf1_preds_acc_table <- kable(rf1_preds_acc, caption="Random Forest 1 Error Metrics") %>% 
   kable_styling(full_width = F)
 
 rf1_preds_acc_table
@@ -1283,11 +1344,14 @@ EP_model_rf2 <-
 rf2_preds_MAE <- mean(EP_model_rf2$rf_absError2, na.rm = T)
 rf2_preds_MAPE <- mean(EP_model_rf2$rf_APE2, na.rm = T)
 rf2_preds_acc <- data.frame(rf2_preds_MAE, rf2_preds_MAPE)
-rf2_preds_acc_table <- kable(rf2_preds_acc) %>% 
+rf2_preds_acc_table <- kable(rf2_preds_acc, caption="Random Forest 2 Error Metrics") %>% 
   kable_styling(full_width = F)
 
 rf2_preds_acc_table
 ```
+
+
+_JE Note: Sisun, can you talk about the GridSearch briefly here and why we did it/what we did with it?_
 
 ```{r grid search mtry for RF model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
@@ -1304,10 +1368,11 @@ rf_gridsearch <- train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 +
                        tuneGrid=tunegrid, 
                        trControl=control)
 
-print(rf_gridsearch)
-plot(rf_gridsearch)
+#print(rf_gridsearch)
+#plot(rf_gridsearch)
 
 ```
+
 
 ## 5.5 SVM
 
@@ -1342,7 +1407,7 @@ EP_model_svm1 <-
 svm1_MAE <- mean(EP_model_svm1$svm_absError, na.rm = T)
 svm1_MAPE <- mean(EP_model_svm1$svm_APE, na.rm = T)
 svm1_acc <- data.frame(svm1_MAE, svm1_MAPE)
-kable(svm1_acc) %>% 
+kable(svm1_acc, caption="SVM 1 Error Metrics") %>% 
   kable_styling(full_width = F)
 
 ```
@@ -1537,7 +1602,7 @@ xgb_MAPE <- mean(abs(xgb_result$pred_xgb - xgb_result$PCI_2018)/xgb_result$PCI_2
 #MAPE
 xgb_acc <- data.frame(xgb_MAE, xgb_MAPE)
 
-xgb_acc_table <- kable(xgb_acc) %>% 
+xgb_acc_table <- kable(xgb_acc, caption = "XGBoost Error Metrics") %>% 
   kable_styling(full_width = F)
 xgb_acc_table
 ```
@@ -1570,7 +1635,7 @@ for (j in 1:nrow(hyper_grid)) {
 
 ## 5.7 Model Cross Validation
 
-We decide go forth with additional refinement of the random forest and XGBoost models. We carefully examine their model results and error distributions among categorical groups and numeric variables.
+We decide go forth with additional refinement of the random forest (first version) and XGBoost models. We carefully examine their model results and error distributions among categorical groups and numeric variables.
 
 ### 5.7.1 Results for RF
 
@@ -1773,7 +1838,7 @@ ggplot(aes(absError, land_use_type)) +
 
 ## 5.8 Ensemble Modeling
 
-_JE NOTE: Explain/give brief intro to ensemble modeling_
+_JE NOTE: We need to explain/give brief intro to ensemble modeling...and then also explain that it did not help us that much. Explain why we chose our three groups (Built Environment, Road Connectivity, Road Conditions) for the submodels?_
 
 ```{r ensemble model 1 -- built environment}
 rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
@@ -1784,10 +1849,9 @@ rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + f
                          bootstrap=T)
 
 rf_enmodel1
-importance(rf_enmodel1)
-```
+#importance(rf_enmodel1)
 
-```{r prediction with ensemble model 1}
+#predictions
 EP_enmodel_rf1 <- 
   EP_model_test %>%
   mutate(rf_predict = predict(rf_enmodel1, EP_model_test),
@@ -1795,16 +1859,20 @@ EP_enmodel_rf1 <-
          rf_absError = abs(rf_predict - PCI_2018),
          rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
 
-rf1_preds_MAE <- mean(EP_enmodel_rf1$rf_absError, na.rm = T)
-rf1_preds_MAPE <- mean(EP_enmodel_rf1$rf_APE, na.rm = T)
-rf1_preds_acc <- data.frame(rf1_preds_MAE, rf1_preds_MAPE)
-rf1_preds_acc_table <- kable(rf1_preds_acc) %>% 
-  kable_styling(full_width = F)
-
-rf1_preds_acc_table
 ```
 
-```{r ensemble model 2 -- road network}
+```{r rfen1 metrics, message=FALSE, warning=FALSE}
+enrf1_preds_MAE <- mean(EP_enmodel_rf1$rf_absError, na.rm = T)
+enrf1_preds_MAPE <- mean(EP_enmodel_rf1$rf_APE, na.rm = T)
+enrf1_preds_acc <- data.frame(enrf1_preds_MAE, enrf1_preds_MAPE)
+enrf1_preds_acc_table <- kable(enrf1_preds_acc, caption = "Random Forest Ensemble 1 (Built Environment) Metrics") %>% 
+  kable_styling(full_width = F)
+
+enrf1_preds_acc_table
+```
+
+
+```{r ensemble model 2 -- road network, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 rf_enmodel2 <- randomForest(PCI_2018 ~  (road_age * CLASS) + dist_major_int + 
                               crash_len + dist_major_arterial,
                          data = EP_model_train, 
@@ -1813,27 +1881,29 @@ rf_enmodel2 <- randomForest(PCI_2018 ~  (road_age * CLASS) + dist_major_int +
                          bootstrap=T)
 
 rf_enmodel2
-importance(rf_enmodel2)
-```
+#importance(rf_enmodel2)
 
-```{r prediction with ensemble model 2}
+# predictions
 EP_enmodel_rf2 <- 
   EP_model_test %>%
   mutate(rf_predict = predict(rf_enmodel2, EP_model_test),
          rf_error = rf_predict - PCI_2018,
          rf_absError = abs(rf_predict - PCI_2018),
-         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
-
-rf2_preds_MAE <- mean(EP_enmodel_rf2$rf_absError, na.rm = T)
-rf2_preds_MAPE <- mean(EP_enmodel_rf2$rf_APE, na.rm = T)
-rf2_preds_acc <- data.frame(rf2_preds_MAE, rf2_preds_MAPE)
-rf2_preds_acc_table <- kable(rf2_preds_acc) %>% 
-  kable_styling(full_width = F)
-
-rf2_preds_acc_table
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018)
 ```
 
-```{r ensemble model 3 -- road conditions}
+
+```{r enrf2 results, warning=FALSE}
+enrf2_preds_MAE <- mean(EP_enmodel_rf2$rf_absError, na.rm = T)
+enrf2_preds_MAPE <- mean(EP_enmodel_rf2$rf_APE, na.rm = T)
+enrf2_preds_acc <- data.frame(enrf2_preds_MAE, enrf2_preds_MAPE)
+enrf2_preds_acc_table <- kable(enrf2_preds_acc, caption = "Random Forest Ensemble 2 (Road Network) Metrics") %>%
+  kable_styling(full_width = F)
+
+enrf2_preds_acc_table
+```
+
+```{r ensemble model 3 -- road conditions, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 rf_enmodel3 <- randomForest(PCI_2018 ~  rb_base + rb_surface + potholes_len,
                          data = EP_model_train, 
                          ntree=750,
@@ -1841,10 +1911,9 @@ rf_enmodel3 <- randomForest(PCI_2018 ~  rb_base + rb_surface + potholes_len,
                          bootstrap=T)
 
 rf_enmodel3
-importance(rf_enmodel3)
-```
+#importance(rf_enmodel3)
 
-```{r prediction with ensemble model 3}
+#predictions
 EP_enmodel_rf3 <- 
   EP_model_test %>%
   mutate(rf_predict = predict(rf_enmodel3, EP_model_test),
@@ -1852,16 +1921,22 @@ EP_enmodel_rf3 <-
          rf_absError = abs(rf_predict - PCI_2018),
          rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
 
-rf3_preds_MAE <- mean(EP_enmodel_rf3$rf_absError, na.rm = T)
-rf3_preds_MAPE <- mean(EP_enmodel_rf3$rf_APE, na.rm = T)
-rf3_preds_acc <- data.frame(rf3_preds_MAE, rf3_preds_MAPE)
-rf3_preds_acc_table <- kable(rf3_preds_acc) %>% 
+
+```
+
+
+```{r enrf3 metrics, message=FALSE, warning=FALSE}
+enrf3_preds_MAE <- mean(EP_enmodel_rf3$rf_absError, na.rm = T)
+enrf3_preds_MAPE <- mean(EP_enmodel_rf3$rf_APE, na.rm = T)
+enrf3_preds_acc <- data.frame(enrf3_preds_MAE, enrf3_preds_MAPE)
+enrf3_preds_acc_table <- kable(enrf3_preds_acc, caption="Random Forest Ensemble 3 (Road Conditions) Metrics") %>% 
   kable_styling(full_width = F)
 
 rf3_preds_acc_table
+
 ```
 
-```{r ensembling preparation}
+```{r ensembling preparation, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 EP_enmodel_all <- 
   EP_model_test %>%
   mutate(rf_predict1 = predict(rf_enmodel1, EP_model_test),
@@ -1882,7 +1957,7 @@ EP_enmodel_test <-
 
 ```
 
-```{r ensembling}
+```{r ensembling, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 rf_ensemble <- randomForest(PCI_2018 ~  rf_predict1 + rf_predict2 + rf_predict3, 
                          data = EP_enmodel_train, 
                          ntree=750,
@@ -1890,10 +1965,14 @@ rf_ensemble <- randomForest(PCI_2018 ~  rf_predict1 + rf_predict2 + rf_predict3,
                          bootstrap=T)
 
 rf_ensemble
-importance(rf_ensemble)
 ```
 
-```{r ensemble prediction}
+```{r ensembling importances, message=FALSE, warning=FALSE}
+importance(rf_ensemble)
+
+```
+
+```{r ensemble prediction, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 EP_enmodel_prediction <- 
   EP_enmodel_test %>%
   mutate(rf_predict = predict(rf_ensemble, EP_enmodel_test),
@@ -1901,19 +1980,25 @@ EP_enmodel_prediction <-
          rf_absError = abs(rf_predict - PCI_2018),
          rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
 
+```
+
+```{r ensemble prediction table, message=FALSE, warning=FALSE}
 enmodel_preds_MAE <- mean(EP_enmodel_prediction$rf_absError, na.rm = T)
 enmodel_preds_MAPE <- mean(EP_enmodel_prediction$rf_APE, na.rm = T)
 enmodel_preds_acc <- data.frame(enmodel_preds_MAE, enmodel_preds_MAPE)
-enmodel_preds_acc_table <- kable(enmodel_preds_acc) %>% 
+enmodel_preds_acc_table <- kable(enmodel_preds_acc, caption="Random Forest Ensemble Model Metrics") %>% 
   kable_styling(full_width = F)
 
 enmodel_preds_acc_table
 ```
 
 
-### Ensemble Modeling Result
+### Ensemble Modeling Results
 
-```{r Ensemble modeling result}
+_JE NOTE: we need to add some text here - even just a couple of sentences - about results_
+
+```{r Ensemble modeling results, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# let's exclude these submodel plots
 
 EP_enmodel_rf1 %>%
 ggplot(aes(PCI_2018, rf_absError)) +
@@ -1944,7 +2029,7 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 ```
 
-```{r Ensemble modeling result2}
+```{r Ensemble modeling result2, message=FALSE, warning=FALSE}
 EP_enmodel_prediction %>%
 ggplot(aes(PCI_2018, rf_absError)) +
   geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
@@ -1957,6 +2042,7 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 
 ## 6. Prediction
+_JE NOTE: Need some text introducing this section and that we are using the random forest model 1 (NOT ensemble)_
 
 ### 6.1 Prediction for PCI 2021
 
@@ -1979,7 +2065,8 @@ ggplot()+
        subtitle = "El Paso, TX") + mapTheme()
 ```
 
-what's up with the NAs?
+_JE NOTE: what's up with the NAs? Let's talk about how to deal with them here_
+
 ```{r examine na dataframe}
 table(is.na(EP_model_predictions_2021$predictions))
 EP_model_predictions_2021_nas <- EP_model_predictions_2021 %>% filter(is.na(EP_model_predictions_2021$predictions))
