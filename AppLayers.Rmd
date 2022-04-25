@@ -118,27 +118,92 @@ plotTheme <- function(base_size = 12) {
 load("Data/EPCenterline_new6.RData")
 
 PCI2018 <- EPCenterline_new6%>%
-  dplyr::select(PCI_2018)
+  dplyr::select(PCI_2018)%>%
+  st_as_sf()%>%
+  st_transform(4326)
 
 #writing out the file as a geojson
-#st_write(PCI2018, "PCI2018.geojson")
+#st_write(PCI2018, "PCI2018.geojson", driver="GeoJSON")
 ```
 
 # Load equity layer
 
 ```{r equity layer}
 EquityLayer <- st_read("ApplicationDevelopment/AppData/EquityLayer/Equity_12_11_2020/Equity_12_11_2020.shp")%>%
+  st_as_sf()%>%
   st_transform('ESRI:102339')%>%
   dplyr::select('Total_Equi')%>%
-  mutate("Total Equity" = Total_Equi)%>%
-  dplyr::select('Total Equity')
+  mutate("total_equity" = Total_Equi)%>%
+  dplyr::select('total_equity')
 
-st_write(EquityLayer, "EquityLayer.geojson")
+EquityLayer <- EquityLayer %>%
+  st_transform(4326)
+
+#st_write(EquityLayer, "EquityLayer.geojson", driver = "GeoJSON")
 ```
 
 
+```{r crash layer}
+#read in blank hex layer
+BlankHex <- st_read("ApplicationDevelopment/AppData/BlankHex.shp")%>%
+  st_as_sf()%>%
+  st_transform('ESRI:102339')%>%
+  mutate(HexID = row_number())
+
+#read in crash point data
+crashes <- st_read("Data/CRIS2021/CRIS2021.shp")%>%
+  st_as_sf()%>%
+  st_transform('ESRI:102339')%>%
+  na.omit()
+
+#join layers
+crashHex <- st_join(crashes, BlankHex, join=st_within)%>%
+  st_drop_geometry()%>%
+  group_by(HexID)%>%
+  summarize(crash_count = n())%>%
+  full_join(BlankHex, by = "HexID")%>%
+  drop_na(HexID)%>% #some NAs because 97 points are on the city border...excluding for now
+  st_as_sf()%>%
+  st_transform('ESRI:102339')
+```
 
 
+```{r traffic layer}
+#read in waze data
+waze <- st_read("Data/cleaned_waze_data.csv")%>%
+  filter(grepl('2021', Date))%>%
+  st_as_sf(coords = c("x_coor", "y_coor"), crs = 4326, agr = "constant") %>%
+  st_transform('ESRI:102339')
+
+#join to crashHex
+crash_waze_Hex <- st_join(waze, crashHex, join=st_within)%>%
+  st_drop_geometry()%>%
+  group_by(HexID)%>%
+  summarize(waze_count = n())%>%
+  full_join(crashHex, by = "HexID")%>%
+  drop_na(HexID)%>%
+  st_as_sf()%>%
+  st_transform('ESRI:102339')
+```
+
+
+```{r all layers}
+#transform equity data to have matching crs
+EquityLayer_EPcrs <- EquityLayer %>%
+  mutate(HexID = row_number())%>%
+  st_drop_geometry()
+
+#join to blank hex for same HexID col
+allHex <- full_join(crash_waze_Hex, EquityLayer_EPcrs, by="HexID")%>%
+  dplyr::select('HexID', 'waze_count', 'crash_count', 'total_equity', 'geometry')
+
+#transform to 4326 for geojson
+allHex <- allHex%>%
+  st_transform(4326)
+
+#write out as geojson
+#st_write(allHex, "allHex.geojson", driver = "GeoJSON" )
+```
 
 
 
