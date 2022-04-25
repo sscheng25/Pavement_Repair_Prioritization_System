@@ -119,7 +119,8 @@ plotTheme <- function(base_size = 12) {
 
 # OPTIONAL BELOW:
 # modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-load("Data/beforeModel.RData")
+# load("Data/beforeModel.RData")
+load("Data/New_feature_model.RData")
 
 ```
 
@@ -1649,7 +1650,7 @@ ggplot(aes(rf_absError, PLANAREA)) +
 ggplot(EP_model_rf1 %>% subset(PCI_2018<50 & PCI_2018>25), aes(x=rf_error)) + 
   geom_histogram(binwidth=3, fill="#5192B0", color="white") +  
   labs(title = "Error Distribution (25 < PCI < 50)",
-         x="Error",
+         x="Error (Predicted PCI - Actual PCI)",
          y="Count",
        subtitle = "Random Forest") +
   plotTheme()
