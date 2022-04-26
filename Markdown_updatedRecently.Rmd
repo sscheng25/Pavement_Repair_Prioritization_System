@@ -1711,7 +1711,7 @@ ggplot(aes(rf_absError, PLANAREA)) +
 ```
 
 ```{r RF result distribution 2}
-ggplot(EP_model_rf1 %>% subset(PCI_2018<50 & PCI_2018>25), aes(x=rf_error)) + 
+ggplot(EP_model_rf1 %>% subset(PCI_2018<55 & PCI_2018>25), aes(x=rf_error)) + 
   geom_histogram(binwidth=3, fill="#5192B0", color="white") +  
   labs(title = "Error Distribution (25 < PCI < 50)",
          x="Error",
