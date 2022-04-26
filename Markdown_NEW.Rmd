@@ -2037,7 +2037,8 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 
 # 6. Prediction
-_JE NOTE: Need some text introducing this section and that we are using the random forest model 1 (NOT ensemble)_
+
+Based on the model training and testing attempts above, we finally decide to make PCI predictions with *Random Forest Model 1*, which is built up in 5.4.1. In this part, we aim to get the PCI for 2021 as output of the random forest regression model.
 
 ## 6.1 Prediction for PCI 2021
 
@@ -2046,15 +2047,15 @@ _JE NOTE: Need some text introducing this section and that we are using the rand
 
 EP_model_predictions_2021 <- 
   EPCenterline_2019to2021 %>%
-  mutate(predictions = round(predict(rf_model1, EPCenterline_2019to2021)))
-
+  mutate(predictions = round(predict(rf_model1, EPCenterline_2019to2021))) %>%
+  drop_na(predictions)
 ```
 
 ```{r plot predicted PCIs}
 ggplot()+
   geom_sf(data = El_Paso_city, fill="transparent", color="grey") +
   geom_sf(data = EP_model_predictions_2021, aes(color = predictions)) +
-  scale_color_viridis(option='G', direction=-1)+
+  scale_color_viridis(option='G', direction=-1) +
   labs(title = "Predicted PCI for 2021",
        color="PCI",
        subtitle = "El Paso, TX") + mapTheme()
