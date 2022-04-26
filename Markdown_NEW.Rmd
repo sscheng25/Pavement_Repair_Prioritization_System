@@ -112,15 +112,11 @@ plotTheme <- function(base_size = 12) {
 
 
 ```{r message=FALSE, warning=FALSE}
-#Please download the **EDA.RData** file from [google drive](https://drive.google.com/file/d/1sr7AMW5YAfoxHK-9UVq9fOxVcafevpJp/view?usp=sharing) and put it under Data/, I've added the path to gitignore file.
+# RData from EDA part
+# load("Data/EDA2.RData")
 
-# RData from EDA part, please make sure to run this properly
-#load("Data/EDA2.RData")
-
-# OPTIONAL BELOW:
-# modelling_0325.RData contains all the model in this Rmd file, if you do not wish to run through all the models below and just want to take a quick look at the model results, you can download the RData file here(https://drive.google.com/file/d/15yaeGVxl-Wnh78o9jxEzRJgCwMT7taa8/view?usp=sharing), save it in the corresponding root and load it. 
-
-load("Data/New_feature_model.RData")
+# the only thing need to load 04/26
+load("Data/All_feature_models.RData")
 
 ```
 
@@ -947,7 +943,7 @@ EPCenterline_2019to2021 <- subset(EPCenterline_new8, select= -c(crash_count16_18
 
 ```
 
-```{r RENAME}
+```{r RENAME, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # RENAME THE YEAR SPECIFIC COLUMNS TO BE NAMED THE SAME AFTER THE SPLIT
 
 EPCenterline_2016to2018 <- EPCenterline_2016to2018 %>%
@@ -1594,7 +1590,7 @@ xgb_result$absError <- abs(xgb_result$pred_xgb - xgb_result$PCI_2018)
 
 ```
 
-```{r results='show'}
+```{r xgboost error 2,  results='show'}
 xgb_MAE <- mean(abs(xgb_result$pred_xgb - xgb_result$PCI_2018)) #MAE
 xgb_MAPE <- mean(abs(xgb_result$pred_xgb - xgb_result$PCI_2018)/xgb_result$PCI_2018) 
 #MAPE
@@ -1808,7 +1804,7 @@ ggplot(aes(PCI_2018, absError)) +
 xgb_result %>%
 ggplot(aes(floodzone_highrisk, absError)) +
   geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
-  labs(title = "Absolute Error vs. PCI",
+  labs(title = "Absolute Error vs. Floodzone",
          y="Absolute Error",
          x="Floodzone",
        subtitle = "XGBoost")  + 
@@ -1840,7 +1836,7 @@ Ensemble modeling is a process where multiple diverse models are created to pred
 
 As mentioned before, we classify our features into three categories, **built environment**, **road connectivity**, and **road conditions**, and we decide to use the same criterion to build up sub-models.
 
-```{r ensemble model 1 -- built environment}
+```{r ensemble model 1 -- built environment, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
                            VMT_pop + dist_hydro + land_use_type + floodzone_highrisk + interstateBound,
                          data = EP_model_train, 
@@ -1932,7 +1928,7 @@ enrf3_preds_acc <- data.frame(enrf3_preds_MAE, enrf3_preds_MAPE)
 enrf3_preds_acc_table <- kable(enrf3_preds_acc, caption="Random Forest Ensemble 3 (Road Conditions) Metrics") %>% 
   kable_styling(full_width = F)
 
-rf3_preds_acc_table
+enrf3_preds_acc_table
 
 ```
 
@@ -2040,10 +2036,10 @@ ggplot(aes(PCI_2018, rf_absError)) +
 ```
 
 
-## 6. Prediction
+# 6. Prediction
 _JE NOTE: Need some text introducing this section and that we are using the random forest model 1 (NOT ensemble)_
 
-### 6.1 Prediction for PCI 2021
+## 6.1 Prediction for PCI 2021
 
 ```{r PCI prediction for 2021}
 #preds <- predict(rf_model1, EPCenterline_2019to2021, type="response") %>% as.data.frame()
@@ -2066,7 +2062,7 @@ ggplot()+
 
 _JE NOTE: what's up with the NAs? Let's talk about how to deal with them here_
 
-```{r examine na dataframe}
+```{r examine na dataframe, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 table(is.na(EP_model_predictions_2021$predictions))
 EP_model_predictions_2021_nas <- EP_model_predictions_2021 %>% filter(is.na(EP_model_predictions_2021$predictions))
 ```
