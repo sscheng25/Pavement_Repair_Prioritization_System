@@ -17,3 +17,5 @@ MUSA Practicum project for Pavement Repair Prioritization System in El Paso, TX.
 - [First Markdown - Exploratory_Data_Analysis(.html/.Rmd)](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Exploratory_Data_Analysis.html)
 - [Second Presentation](https://docs.google.com/presentation/d/11aS4eTrVa6-8GkOAA2R9YS2aTQHHKxNDIiN7J0pR7oU/edit?usp=sharing)
 - [Second Markdown - Markdown_updatedMarch28](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
+- [Third/Internal Final Presentation](https://docs.google.com/presentation/d/1aqgVJDD9HkTqCe-Og5wOU1PfD7RWgbd7BWaCvYJuy8A/edit?usp=sharing)
+- [Third/Internal Final Markdown]()
