@@ -213,7 +213,7 @@ PCI2021 <- EP_model_predictions_2021%>%
   st_transform(4326)
 
 #writing out the file as a geojson
-#st_write(PCI2018, "PCI2018.geojson", driver="GeoJSON")
+#st_write(PCI2021, "PCI2021.geojson", driver="GeoJSON")
 
 ```
 
