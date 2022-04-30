@@ -204,6 +204,18 @@ allHex <- allHex%>%
 #write out as geojson
 #st_write(allHex, "allHex.geojson", driver = "GeoJSON" )
 ```
+```{r PCI 2021}
+load("ApplicationDevelopment/AppData/EP_model_predictions_2021.RData")
+
+PCI2021 <- EP_model_predictions_2021%>%
+  dplyr::select(predictions)%>%
+  st_as_sf()%>%
+  st_transform(4326)
+
+#writing out the file as a geojson
+#st_write(PCI2018, "PCI2018.geojson", driver="GeoJSON")
+
+```
 
 
 
