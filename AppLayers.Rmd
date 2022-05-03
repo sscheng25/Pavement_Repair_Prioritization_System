@@ -229,11 +229,12 @@ PCI2021 <- full_join(EP_model_predictions_2021, streetNames, by='index')%>%
 
 #select columns we want in tooltip
 PCI2021 <- PCI2021%>%
-  mutate(STREETNAME = StreetName_EP)%>%
-  dplyr::select('STREETNAME','CLASS','PLANAREA','DISTRICT')
+  mutate(STREETNAME = StreetName_EP,
+         PCI_2021 = predictions)%>%
+  dplyr::select('STREETNAME','CLASS','PLANAREA','DISTRICT','PCI_2021')
 
 #writing out the file as a geojson
-#st_write(PCI2021, "PCI2021.geojson", driver="GeoJSON")
+#st_write(PCI2021, "PCI2021_predictions.geojson", driver="GeoJSON")
 
 ```
 
