@@ -212,10 +212,25 @@ allHex <- allHex%>%
 ```{r PCI 2021}
 load("ApplicationDevelopment/AppData/EP_model_predictions_2021.RData")
 
+#selecting streetnames
+streetNames <- EPCenterline_new6 %>%
+  dplyr::select('index','StreetName_EP')%>%
+  st_drop_geometry()
+
+#selecting predictions
 PCI2021 <- EP_model_predictions_2021%>%
   dplyr::select(predictions)%>%
+  st_drop_geometry()
+
+#join
+PCI2021 <- full_join(EP_model_predictions_2021, streetNames, by='index')%>%
   st_as_sf()%>%
   st_transform(4326)
+
+#select columns we want in tooltip
+PCI2021 <- PCI2021%>%
+  mutate(STREETNAME = StreetName_EP)%>%
+  dplyr::select('STREETNAME','CLASS','PLANAREA','DISTRICT')
 
 #writing out the file as a geojson
 #st_write(PCI2021, "PCI2021.geojson", driver="GeoJSON")
