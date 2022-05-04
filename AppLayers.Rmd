@@ -214,7 +214,7 @@ load("ApplicationDevelopment/AppData/EP_model_predictions_2021.RData")
 
 #selecting streetnames
 streetNames <- EPCenterline_new6 %>%
-  dplyr::select('index','StreetName_EP')%>%
+  dplyr::select('index','StreetName_EP','STYPE')%>%
   st_drop_geometry()
 
 #selecting predictions
@@ -231,10 +231,16 @@ PCI2021 <- full_join(EP_model_predictions_2021, streetNames, by='index')%>%
 PCI2021 <- PCI2021%>%
   mutate(STREETNAME = StreetName_EP,
          PCI_2021 = predictions)%>%
+  dplyr::select('STREETNAME','STYPE','CLASS','PLANAREA','DISTRICT','PCI_2021')
+
+#concatenate STREETNAME and STYPE columns
+PCI2021 <- PCI2021%>%
+  unite('Merged', STREETNAME:STYPE, remove=FALSE)%>%
+  mutate(STREETNAME=Merged)%>%
   dplyr::select('STREETNAME','CLASS','PLANAREA','DISTRICT','PCI_2021')
 
 #writing out the file as a geojson
-#st_write(PCI2021, "PCI2021_predictions.geojson", driver="GeoJSON")
+st_write(PCI2021, "PCI2021_predictions.geojson", driver="GeoJSON")
 
 ```
 
