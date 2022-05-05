@@ -205,7 +205,7 @@ allHex <- allHex%>%
   st_transform(4326)
 
 #write out as geojson
-#st_write(allHex, "allHex.geojson", driver = "GeoJSON" )
+st_write(allHex, "allHex.geojson", driver = "GeoJSON" )
 ```
 
 
@@ -240,11 +240,24 @@ PCI2021 <- PCI2021%>%
   dplyr::select('STREETNAME','CLASS','PLANAREA','DISTRICT','PCI_2021')
 
 #writing out the file as a geojson
-st_write(PCI2021, "PCI2021_predictions.geojson", driver="GeoJSON")
+#st_write(PCI2021, "PCI2021_predictions.geojson", driver="GeoJSON")
 
 ```
 
 
+```{r flood risk layer}
+floodrisk <- st_read("Data/PrelimFloodZone2020/PrelimFloodZone2020.shp")%>%
+  st_as_sf()%>%
+  st_transform(4326)
+
+floodrisk <- floodrisk %>%
+  filter(STUDY_TYP!="NP")%>%
+  dplyr::select('FLD_ZONE', 'STUDY_TYP', 'SOURCE_CIT','FLD_AR_ID')
+
+#write out as shapefile
+st_write(floodrisk, "FloodRisk_new.geojson", driver="GeoJSON")
+
+```
 
 
 
