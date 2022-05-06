@@ -341,7 +341,7 @@ We apply data cleaning and wrangling on the `EPCenterline` data layer, such as:
 - Removing some duplicated **LOCAL** classes
 - Combining similar road classes, per client request
 
-After speaking to our client, we only keep four pavement categories that fall under teh city's jurisdiction for maintenance - **LOCAL**, **MINOR**, **MAJOR**, and **COLLECTOR**. We can see that most of the segments belong to the **LOCAL** category.
+After speaking to our client, we only keep four pavement categories that fall under the city's jurisdiction for maintenance - **LOCAL**, **MINOR**, **MAJOR**, and **COLLECTOR**. We can see that most of the segments belong to the **LOCAL** category.
 
 ```{r EP centerlines ggplots, message=FALSE, warning=FALSE}
 ggplot() +
@@ -1257,7 +1257,70 @@ To achieve a better accuracy, we explore some sophisticated machine learning mod
 
 Here we set up two random forest models with the engineered features. We also selected hyperparameters based on the grid search cross validation result for better model performance. According to the grid search cross validation and manual hyperparameter tuning, We used **750 trees** and **mtry of 15**. Additionally, `rf_model1` is built with `bootstrap=True` while `rf_model2` with `bootstrap=False`. In fact, as the MAPEs show, the hyperparameter bootstrap does not do much in our models. `rf_model1`  returns MAPE of 25.31% and `rf_model2` returns MAPE of 25.28%, the best performance so far.
 
-### 5.4.1 Random Forest Model 1
+### 5.4.1 Initial Random Forest Model
+
+```{r set up initial random forest model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+rf_model_initial <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk + dist_major_arterial + interstateBound,
+                         data = EP_model_train)
+
+rf_model_initial
+importance(rf_model_initial)
+```
+
+```{r prediction with rf model initial, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+EP_model_rf_initial <- 
+  EP_model_test %>%
+  mutate(rf_predict = predict(rf_model_initial, EP_model_test),
+         rf_error = rf_predict - PCI_2018,
+         rf_absError = abs(rf_predict - PCI_2018),
+         rf_APE = (abs(rf_predict - PCI_2018)) / PCI_2018) 
+
+```
+
+```{r rf initial result, warning=FALSE}
+
+rf_preds_MAE <- mean(EP_model_rf_initial$rf_absError, na.rm = T)
+rf_preds_MAPE <- mean(EP_model_rf_initial$rf_APE, na.rm = T)
+rf_preds_acc <- data.frame(rf_preds_MAE, rf_preds_MAPE)
+rf_preds_acc_table <- kable(rf_preds_acc, caption="Initial Random Forest Error Metrics") %>% 
+  kable_styling(full_width = F)
+
+rf_preds_acc_table
+```
+
+
+### 5.4.2 Hyperparameter tuning
+
+Hyperparameters control how random forest algorithm learns and how it behaves. Unlike the internal parameters that the algorithm automatically optimizes during model training, hyperparameters are model characteristics that we must set in advance. Finding the optimal hyperparameters configuration is challenging and there is no way of knowing the ideal hyperparameters in advance. It is, therefore, that finding an excellent model requires conducting several experiments with different parameters. To avoid the time-consuming manual hyperparameter tuning, we apply the grid-search cross validation here. Grid search uses a grid of predefined hyperparameters to test all possible permutations and return the model variant that leads to the best results. Here, we mainly test on the **mtry** hyperparameter. mtry is the number of variables randomly sampled as candidates at each split, and it's one of the most important hyperparameter for the random forest model that influence the model performance. After running the grid search cv, we get the optimal **mtry = 15**.
+
+```{r grid search mtry for RF model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+set.seed(111)
+tunegrid <- expand.grid(.mtry=c(1, 5, 10, 11, 12, 13, 14, 15))
+rf_gridsearch <- train(PCI_2018 ~  crash_len + potholes_len + 
+                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
+                           road_age + VMT_pop + dist_hydro + dist_major_int + 
+                           CLASS + land_use_type + 
+                           rb_base + rb_surface +
+                           floodzone_highrisk + dist_major_arterial + interstateBound,
+                       data = EP_model_train, 
+                       method="rf", 
+                       tuneGrid=tunegrid, 
+                       trControl=control)
+
+```
+
+```{r print the grid search result}
+rf_gridsearch
+```
+
+
+### 5.4.3 Tuned Random Forest Model
 
 ```{r set up rf model1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 rf_model1 <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
@@ -1280,28 +1343,6 @@ importance(rf_model1)
 importance(rf_model1) %>% kable(caption="Random Forest Model 1 Feature Importances") %>% kable_styling()
 ```
 
-### 5.4.2 Random Forest Model 2
-
-_JE NOTE: Sisun, can you explain the different feature selection for this RF model compared to the first one?_
-
-```{r set up rf model2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
-rf_model2 <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
-                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
-                           road_age + VMT_pop + dist_hydro + dist_major_int + 
-                           CLASS + land_use_type + 
-                           rb_base + rb_surface +
-                           floodzone_highrisk + dist_major_arterial + interstateBound,
-                         data = EP_model_train, 
-                         ntree=750,
-                         mtry=15,
-                         bootstrap=F)
-
-```
-
-```{r rfmodel2importance, echo=FALSE}
-rf_model2
-importance(rf_model2) %>% kable(caption="Random Forest Model 2 Feature Importances") %>% kable_styling()
-```
 
 ```{r prediction with rf model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 EP_model_rf1 <- 
@@ -1323,50 +1364,6 @@ rf1_preds_acc_table <- kable(rf1_preds_acc, caption="Random Forest 1 Error Metri
 
 rf1_preds_acc_table
 ```
-
-```{r prediction with rf model 2, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-EP_model_rf2 <- 
-  EP_model_test %>%
-  mutate(rf_predict2 = predict(rf_model2, EP_model_test),
-         rf_error2 = rf_predict2 - PCI_2018,
-         rf_absError2 = abs(rf_predict2 - PCI_2018),
-         rf_APE2 = (abs(rf_predict2 - PCI_2018)) / PCI_2018) 
-
-```
-
-```{r rf 2 result}
-rf2_preds_MAE <- mean(EP_model_rf2$rf_absError2, na.rm = T)
-rf2_preds_MAPE <- mean(EP_model_rf2$rf_APE2, na.rm = T)
-rf2_preds_acc <- data.frame(rf2_preds_MAE, rf2_preds_MAPE)
-rf2_preds_acc_table <- kable(rf2_preds_acc, caption="Random Forest 2 Error Metrics") %>% 
-  kable_styling(full_width = F)
-
-rf2_preds_acc_table
-```
-
-### 5.4.3 Hyperparameter tuning
-
-Hyperparameters control how random forest algorithm learns and how it behaves. Unlike the internal parameters that the algorithm automatically optimizes during model training, hyperparameters are model characteristics that we must set in advance. Finding the optimal hyperparameters configuration is challenging and there is no way of knowing the ideal hyperparameters in advance. It is, therefore, that finding an excellent model requires conducting several experiments with different parameters. To avoid the time-consuming manual hyperparameter tuning, we apply the grid-search cross validation here. Grid search uses a grid of predefined hyperparameters to test all possible permutations and return the model variant that leads to the best results. Here, we mainly test on the **mtry** hyperparameter. mtry is the number of variables randomly sampled as candidates at each split, and it's one of the most important hyperparameter for the random forest model that influence the model performance. After running the grid search cv, we get the optimal **mtry = 15**.
-
-```{r grid search mtry for RF model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
-set.seed(111)
-tunegrid <- expand.grid(.mtry=c(1, 5, 10, 15))
-rf_gridsearch <- train(PCI_2018 ~  crash_len16_18 + potholes_len16_18 + 
-                           car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
-                           road_age + VMT_pop + dist_hydro + dist_major_int + 
-                           CLASS + land_use_type + 
-                           rb_base + rb_surface +
-                           floodzone_highrisk,
-                       data = EP_model_train, 
-                       method="rf", 
-                       tuneGrid=tunegrid, 
-                       trControl=control)
-
-#print(rf_gridsearch)
-
-```
-
 
 ## 5.5 SVM
 
@@ -1769,66 +1766,7 @@ ggplot()+
   mapTheme()
 ```
 
-### 5.7.2 Results for XGBoost
 
-```{r XGB prediction vs real PCI, message=TRUE, warning=TRUE}
-ggplot(xgb_result, aes(x=PCI_2018, y=pred_xgb)) + 
-  geom_point()+
-  geom_smooth(method=lm) +
-  labs(title = "Predicted PCI vs. Real PCI",
-         y="Predicted PCI",
-         x="Real PCI",
-       subtitle = "XGBoost")  + 
-  plotTheme()
-```
-
-```{r XGB prediction result distribution, message=FALSE, warning=FALSE}
-xgb_result %>%
-ggplot(aes(CLASS, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
-  labs(title = "Absolute Error vs. Road Class",
-         y="Absolute Error",
-         x="Road Class",
-       subtitle = "XGBoost")  + 
-  plotTheme()
-
-xgb_result %>%
-ggplot(aes(PCI_2018, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
-  labs(title = "Absolute Error vs. PCI",
-         y="Absolute Error",
-         x="PCI",
-       subtitle = "XGBoost")  + 
-  plotTheme()
-
-xgb_result %>%
-ggplot(aes(floodzone_highrisk, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
-  labs(title = "Absolute Error vs. Floodzone",
-         y="Absolute Error",
-         x="Floodzone",
-       subtitle = "XGBoost")  + 
-  plotTheme()
-
-xgb_result %>%
-ggplot(aes(pave_length, absError)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
-  xlim(0, 1500) +
-  labs(title = "Absolute Error vs. Pavement Length",
-         y="Absolute Error",
-         x="Pave length",
-       subtitle = "XGBoost")  + 
-  plotTheme()
-
-xgb_result %>%
-ggplot(aes(absError, land_use_type)) +
-  geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
-  labs(title = "Absolute Error vs. Land Use",
-         x="Absolute Error",
-         y="Land Use Type",
-       subtitle = "XGBoost")  + 
-  plotTheme()
-```
 
 ## 5.8 Ensemble Modeling
 
