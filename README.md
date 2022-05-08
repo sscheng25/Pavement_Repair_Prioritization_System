@@ -13,7 +13,7 @@ Whenever the city receives a request for a repair, they confirm that the PCI sco
 
 ## Final Deliverables
 - [Final Presentation](https://docs.google.com/presentation/d/1J_ivf-JWPpJ8igKMyKhgVtiwuBJjMprnQp3YOpybxrE/edit?usp=sharing)
-- [Final Markdown]()
+- [Final Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/ElPaso_ReimaginingRoadRepairs_Model.Rmd)
 - [El Paso Road Viewer Application](https://jennaepstein.github.io/El_Paso_Road_Viewer/)
 - [El Paso Road Viewer Repository](https://github.com/jennaepstein/El_Paso_Road_Viewer)
 
