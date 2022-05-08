@@ -1925,7 +1925,7 @@ ggplot(aes(pave_length, rf_absError)) +
   plotTheme()
 ```
 
-We looked to the disbiuttion of aboslutel error across PCI values to see if the model predicts better for higher ratings versus lower, or other patterns that may be present in the data. The plot shows that higher aboslute errors aoccur for road segemetns that have worse PCI scores - particularly below 25.
+We looked to the distribution of absolute error across PCI values to see if the model predicts better for higher ratings versus lower, or other patterns that may be present in the data. The plot shows that higher absolute errors occur for road segments that have worse PCI scores - particularly below 25.
 
 ```{r abs error and pci plot}
 EP_model_rf1 %>%
