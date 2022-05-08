@@ -23,7 +23,7 @@ Whenever the city receives a request for a repair, they confirm that the PCI sco
 - [Second Presentation](https://docs.google.com/presentation/d/11aS4eTrVa6-8GkOAA2R9YS2aTQHHKxNDIiN7J0pR7oU/edit?usp=sharing)
 - [Second Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
 - [Third Presentation](https://docs.google.com/presentation/d/1aqgVJDD9HkTqCe-Og5wOU1PfD7RWgbd7BWaCvYJuy8A/edit?usp=sharing)
-- [Third Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
+- [Third Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedRecently.Rmd)
 
 ## Internal Course Materials
  - [Syllabus](https://docs.google.com/document/d/1ByAQFsgWzwg0lnT_Em_cFwXRydkMG4zSLR7Q3Mz05ow/edit)
