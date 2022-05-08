@@ -1,6 +1,6 @@
 # Reimagining Road Repairs
 
-### Hi there! This repository is for a MUSA Practicum project at the University of Pennsylvania. [Learn more about the practicum and view all projects here.](https://pennmusa.github.io/MUSA_801.io/)
+### Hi there! This repository is for a MUSA Practicum project at the University of Pennsylvania. [Learn more about the Practicum course and view all projects here.](https://pennmusa.github.io/MUSA_801.io/)
 
 #### This project was completed by Kristin Chang, Sisun Cheng, and Jenna Epstein with the help of Alex Hoffman, AICP at the El Paso Capital Improvements Department and MUSA Faculty: Michael Fichman, Matt Harris, and Mjumbe Poe.
 
