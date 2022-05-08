@@ -19,11 +19,11 @@ Whenever the city receives a request for a repair, they confirm that the PCI sco
 
 ## Other Course Deliverables
 - [First Presentation](https://docs.google.com/presentation/d/1JOGHycc9fFwSdGAu4EzRVXzFVSFH1RRHknPAUwKfPFk/edit#slide=id.g115e53c21e0_0_225)
-- [First Markdown - Exploratory_Data_Analysis(.html/.Rmd)](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Exploratory_Data_Analysis.html)
+- [First Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Exploratory_Data_Analysis.html)
 - [Second Presentation](https://docs.google.com/presentation/d/11aS4eTrVa6-8GkOAA2R9YS2aTQHHKxNDIiN7J0pR7oU/edit?usp=sharing)
-- [Second Markdown - Markdown_updatedMarch28](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
-- [Third/Internal Final Presentation](https://docs.google.com/presentation/d/1aqgVJDD9HkTqCe-Og5wOU1PfD7RWgbd7BWaCvYJuy8A/edit?usp=sharing)
-- [Third/Internal Final Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
+- [Second Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
+- [Third Presentation](https://docs.google.com/presentation/d/1aqgVJDD9HkTqCe-Og5wOU1PfD7RWgbd7BWaCvYJuy8A/edit?usp=sharing)
+- [Third Markdown](https://github.com/sscheng25/Pavement_Repair_Prioritization_System/blob/main/Markdown_updatedMarch28.html)
 
 ## Internal Course Materials
  - [Syllabus](https://docs.google.com/document/d/1ByAQFsgWzwg0lnT_Em_cFwXRydkMG4zSLR7Q3Mz05ow/edit)
