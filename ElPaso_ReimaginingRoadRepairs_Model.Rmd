@@ -1950,7 +1950,7 @@ ggplot(EP_model_rf1, aes(x=rf_error)) +
   plotTheme()
 ```
 
-Zooming in on the raw errors for PCI scores from 25 to 55 (the very poor to poor range on the qualitative PCI scale), the errors are less than 25, which means that they are likely not changing categories on the qualitative scale. We interepret this further in the costs and benefits section below.
+Zooming in on the raw errors for PCI scores from 25 to 55 (the very poor to poor range on the qualitative PCI scale), the errors are less than 25, which means that they are likely not changing categories on the qualitative scale. We interpret this further in the costs and benefits section below.
 
 ```{r RF result distribution 2}
 ggplot(EP_model_rf1 %>% subset(PCI_2018<55 & PCI_2018>25), aes(x=rf_error)) + 
