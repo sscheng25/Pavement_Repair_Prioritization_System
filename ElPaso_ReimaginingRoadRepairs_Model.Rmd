@@ -1,7 +1,7 @@
 ---
 title: "Reimagining Road Repairs in El Paso, Texas"
 author: "Kristin Chang, Sisun Cheng, Jenna Epstein"
-date: "Spring 2022"
+date: "May 2022"
 output:
   html_document:
     toc: yes
@@ -116,18 +116,23 @@ plotTheme <- function(base_size = 12) {
 # load("Data/EDA2.RData")
 
 # the only thing need to load 04/26
-load("Data/All_feature_models.RData")
+#load("Data/All_feature_models.RData")
+load("Data/Final_Workspace.RData")
 
 ```
 
+```{r echo=TRUE, fig.cap = "Image source: El Paso Times"}
+knitr::include_graphics("Images/ElPasoRoads_cropped.png")
 
-# 1.Introduction
+```
 
-This project is part of the Spring 2022 [Master of Urban Spatial Analytics/Smart Cities Practicum course (MUSA 801)](https://pennmusa.github.io/MUSA_801.io/)at the University of Pennsylvania taught by Michael Fichman and Matt Harris.
+# 1. Introduction
+
+This project is part of the Spring 2022 [Master of Urban Spatial Analytics/Smart Cities Practicum course (MUSA 801)](https://pennmusa.github.io/MUSA_801.io/) at the University of Pennsylvania taught by Michael Fichman and Matt Harris.
 
 Thank you to Alex Hoffman, AICP at the El Paso Capital Improvements Department for connecting us with all of the data and background context, and for his support and enthusiasm for bringing data analytics to the city. 
 
-We’d also like to thank MUSA Faculty: Michael Fichman, Matt Harris, and Mjumbe Poe for their superior guidance and support throughout this semester.
+We’d also like to thank MUSA Faculty members Michael Fichman, Matt Harris, and Mjumbe Poe for their superior guidance and support throughout this semester.
 
 
 # 2. Project Context & Use Case
@@ -152,10 +157,13 @@ This project is two-pronged:
 
 ## 3.1. Pavement Condition Index (PCI)
 
-A Pavement Condition Index (PCI) measures the quality of a specific road segment. The Capital Improvements Department in El Paso hired a private contractor in 2018 to conduct a digital image scan of the city's roads to evaluate them based on a wide range of conditions. While their exact metrics are proprietary, generally, PCIs are based off of factors such as presence of potholes, bumps, or cracks. The index ranges from a qualitative scale of _Failing_ to _Good_ or quantitatively _0_ to _100_. This chart from an Army Corps of Engineers' study shows a significant drop in condition of a road after a certain amount of time. We consider the cost savings calculations from this study when building in the second part of our project, the decision-making tool. This would be a strong advocacy tool for improving a road as well as a strong planning tool by considering the road's lifetime. For the first portion of the project, this made us curious about the construction of roads and if there are any earlier stage indicators that could show signs of weakening conditions.
+A Pavement Condition Index (PCI) measures the quality of a specific road segment. The index was developed by the United States Army Corps of Engineers (USACE) initially as an airfield pavement rating system, but it was later modified for roadway pavements. The index was standardized by the American Society for Testing and Materials (ASTM).
+
+The Capital Improvements Department in El Paso hired a private contractor in 2018 to conduct a digital image scan of the city's roads to evaluate them based on a wide range of conditions. While their exact metrics are proprietary, generally, PCIs are based off of factors such as presence of potholes, bumps, or cracks. The index ranges from a qualitative scale of _Failing_ to _Good_ or quantitatively _0_ to _100_. This chart adapted from [Colorado State University](http://www.paver.colostate.edu/) below shows a significant drop in condition of a road after a certain amount of time. We consider the cost savings calculations from this study when building in the second part of our project, the decision-making tool. This would be a strong advocacy tool for improving a road as well as a strong planning tool by considering the road's lifetime. For the first portion of the project, this made us curious about the construction of roads and if there are any earlier stage indicators that could show signs of weakening conditions.
 
 ```{r echo=TRUE, fig.cap = "Graphic Informed by Colorado State University - PAVER software"}
 knitr::include_graphics("Images/PCI-plot-white.jpg")
+
 ```
 
 ## 3.2. Road Anatomy
@@ -180,11 +188,12 @@ We considered how various factors can contribute to the overall “wear and tear
 * Road Network 
 * Environment
 
-The far right column indicates if the feature was ultimately used in our final model.The next several subsections go into detail on how these features were engineered and what decisions went into determining their inclusion in the modeling.
+The far right column indicates if the feature was ultimately used in our final model. The next several subsections go into detail on how these features were engineered and what decisions went into determining their inclusion in the modeling.
 
-**Features: Road Conditions**
 
-Road Conditions features indicate anything that has to do with the physical properties of a road.
+### 4.1.2. Features: Road Conditions
+
+The road conditions group contains features that indicate anything that has to do with the physical properties of a road.
 
 
 | Feature                          | Type          | Source                                                      | Used in Final Model? |
@@ -195,7 +204,8 @@ Road Conditions features indicate anything that has to do with the physical prop
 | Potholes (by Road Length)        | Numeric       | *Engineered* from City of El Paso Streets & Maintenance Data| Yes
 | Road Age                         | Numeric       | City of El Paso                                             | Yes
 
-**Features: Environment**
+
+### 4.1.3. Features: Environment
 
 The environment group includes features that may indirectly affect road conditions like if there is water nearby, what is the majority land use category, or how many city amenities are near road segments like entertainment, restaurants or shops that would indicate a lot of travel happening on those roads.
 
@@ -212,8 +222,7 @@ The environment group includes features that may indirectly affect road conditio
 | Below Interstate 10 or Not       | Numeric       | *Engineered* from TIGER/Line Texas Geodatabase - Roads      | Yes
 
 
-
-**Features: Road Network**
+### 4.1.4. Features: Road Network
 
 The road network feature group consists of data that describes how the different road segments interact with one another.
 
@@ -289,8 +298,8 @@ do.call(grid.arrange,c(mapList, ncol = 3, top = "Race by Census Tract"))
 pctWhite_map <- ggplot()+
   geom_sf(data=EP_race, aes(fill=pctWhite), color="grey")+
   scale_fill_viridis(option='G', direction=-1)+
-  labs(title="Percent White in 2019",
-       fill="% White",
+  labs(title="Percent White",
+       fill="%",
        subtitle="Census Tracts in El Paso, TX",
        caption = "Source: US Census, ACS 2019\n\nNote: Gray tracts indicate no data") + mapTheme()
 
@@ -298,13 +307,16 @@ pctWhite_map <- ggplot()+
 ethnicity_hisp_lat_map <- ggplot()+
   geom_sf(data=EP_ethnicity, aes(fill=pctHL), color="grey")+
   scale_fill_viridis(option='G', direction=-1)+
-  labs(title="Percent Hispanic or Latino in 2019",
-       fill="% Hispanic \nor Latino",
+  labs(title="Percent Hispanic or Latino",
+       fill="%",
        subtitle="Census Tracts in El Paso, TX",
        caption = "Source: US Census, ACS 2019\n\nNote: Gray tracts indicate no data") + mapTheme()
 
 grid.arrange(pctWhite_map, ethnicity_hisp_lat_map, ncol=2)
 ```
+
+These maps show that the majority of the city’s population identifies as White or Hispanic or Latino. As pointed out by our client, El Paso has a history of disinvestment in the minority communities that live south of Interstate 10. This trend can be further observed in the median income map where tracts with the lowest median incomes are below this highway. This can mean poor data collection in these census tracts which is important to be aware of when creating our model and also reinforces the motivation to include equity in the decision making tool.
+
 ```{r Median household income map, message=FALSE, warning=FALSE}
 #Median household income
  ggplot()+
@@ -315,11 +327,10 @@ grid.arrange(pctWhite_map, ethnicity_hisp_lat_map, ncol=2)
        subtitle="Census Tracts in El Paso, TX", caption="Source: US Census, ACS 2019\n\nNote: Gray tracts indicate no data") + mapTheme()
 ```
 
-These maps show that the majority of the city’s population identifies as White or Hispanic or Latino. As pointed out by our client, El Paso has a history of disinvestment in the minority communities that live south of Interstate 10. This trend can be further observed in the median income map where tracts with the lowest median incomes are below this highway. This can mean poor data collection in these census tracts which is important to be aware of when creating our model and also reinforces the motivation to include equity in the decision making tool. 
 
 ### 4.2.2. El Paso Hydrology
 
-We also import the hydrology features from the US Census TIGER/Line Geodatabase. The map below shows that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
+We also imported the hydrology features from the US Census TIGER/Line Geodatabase. The map below shows that El Paso does not have an extensive hydrology network, and water is concentrated mostly to the southwestern border of the city.
 
 ```{r visualize hydrology, message=FALSE, warning=FALSE}
 ggplot()+
@@ -340,11 +351,12 @@ ggplot()+
 In this portion of our exploratory data analysis, we dug deeper into existing road centerlines data (`EPCenterline`) provided by the City of El Paso.
 
 Data cleaning and wrangling on the `EPCenterline` data layer included:
-- Removing some unneeded columns to keep the data frame tidy and readable
-- Clipping the data layer to the city level to focus more on our study area
-- Removing some duplicated **LOCAL** classes
-- Joining centerlines data with PCI 2018 values and the latest resurfacing year by joining `EPCenterline` to `centerline_with_age` 
-- Combining similar road classes, per client request
+
+* Removing some unneeded columns to keep the data frame tidy and readable
+* Clipping the data layer to the city level to focus more on our study area
+* Removing some duplicated **LOCAL** classes
+* Joining centerlines data with PCI 2018 values and the latest resurfacing year by joining `EPCenterline` to `centerline_with_age` 
+* Combining similar road classes, per client request
 
 After speaking to our client, we only keep four pavement categories that fall under the city's jurisdiction for maintenance - **LOCAL**, **MINOR**, **MAJOR**, and **COLLECTOR**. We can see that most of the segments belong to the **LOCAL** category.
 
@@ -395,9 +407,9 @@ mapview(EPCenterline_with_PCI, zcol="PCI_2018", color = c("#DEF5E5", "#49C1AD", 
 ```
 
 
-### 4.3.2 Waze Jams
+### 4.3.2. Waze Jams
 
-Vehicle congestion adds to the pressure on pavement, so we explored traffic jam counts from the Waze data provided by the City.
+Vehicle congestion adds to the pressure on pavement, so we explored traffic jam counts from the Waze data provided by the city.
 
 ```{r eval=FALSE, include=FALSE}
 # To get the X and Y coordinates for the traffic jam data from Waze, we applied string extraction on the raw `waze_data` dataset and build up a spatial data frame.
@@ -425,7 +437,7 @@ waze_data$y_coor <- y_fin$y_coor
 ```
 
 
-The histogram below shows most of the traffic jams were heavy or moderate, with a few categorized as light traffic. It's important to keep in mind people do not tend to report light traffic to Waze. 
+The histogram below shows most of the traffic jams were heavy or moderate, with a few categorized as light traffic. It is important to keep in mind people do not tend to report light traffic to Waze. 
 
 _Note: We removed NAs from the Waze data since we are interested in the jam traffic report subtypes only._
 
@@ -476,7 +488,7 @@ EPCenterline_new$waze_len <- as.numeric(as.character(EPCenterline_new$waze_len))
 
 ```
 
-### 4.3.3 Potholes
+### 4.3.3. Potholes
 
 Potholes reported during 2016-2018 and 2019-2021 time periods are visualized below with a total count per year.
 
@@ -603,7 +615,7 @@ EPCenterline_new6 <- merge(EPCenterline_new6, potholes_groupings_2016to2018, by 
 # replace NAs in potholes count column with 0
 EPCenterline_new6$potholes_count16_18[is.na(EPCenterline_new6$potholes_count16_18)] <- 0
 
-# calculate potholes per 100 meters
+# calculate potholes per 100 ft
 EPCenterline_new6 <-
   EPCenterline_new6 %>%
   mutate(potholes_len16_18 = potholes_count16_18*100/pave_length)
@@ -619,7 +631,7 @@ EPCenterline_new6 <- merge(EPCenterline_new6, potholes_groupings_2019to2021, by 
 # replace NAs in potholes count column with 0
 EPCenterline_new6$potholes_count19_21[is.na(EPCenterline_new6$potholes_count19_21)] <- 0
 
-# calculate potholes per 100 meters
+# calculate potholes per 100 ft
 EPCenterline_new6 <-
   EPCenterline_new6 %>%
   mutate(potholes_len19_21 = potholes_count19_21*100/pave_length)
@@ -841,6 +853,7 @@ osm_carfacility_map <- ggplot() +
 
 grid.arrange(osm_fooddrink_map, osm_entertainment_map, osm_carfacility_map, ncol=3, top="Select OpenStreetMap Amenities")
 ```
+
 To relate this data to El Paso's road segments, we calculated the distance of each segment to its third nearest neighbor amenity. After experimenting with different numbers of nearest neighbors, we found that three neighbors were the most highly correlated with PCI score.
 
 ### 4.3.6. High Risk Flood Zones
@@ -881,7 +894,7 @@ EPCenterline_new6 <-
 
 ### 4.3.7. Crashes
 
-Using crash report data from TxDOT, we calculated the number of crashes per foot that occurred on each road segment.Because crashes can result in damage to roads, we expect this feature to significantly influence PCI. This data not only helped inform our predictive model but also the total count of crashes across the city is later used in our web app. 
+Using crash report data from TxDOT, we calculated the number of crashes per foot that occurred on each road segment. Because crashes can result in damage to roads, we expect this feature to significantly influence PCI. This data not only helped inform our predictive model but also the total count of crashes across the city is later used in our web app. 
 
 ```{r udpated crash data according to year, eval=FALSE, message=FALSE, warning=FALSE}
 #read in new data
@@ -973,7 +986,7 @@ EPCenterline_new6$crash_len19_21 <- as.numeric(as.character(EPCenterline_new6$cr
 
 ### 4.3.8. Roadbed Features
 
-In this section we examine the data related to a road’s anatomy: roadbed surface and base materials. 
+We examined the data related to a road’s anatomy: roadbed surface and base materials. 
 
 ```{r join roadbed feats to centerlines, eval=FALSE, message=TRUE, warning=TRUE, include=FALSE}
 #rename target column and drop unneccessary columns
@@ -1056,7 +1069,7 @@ ggplot() +
   mapTheme()
 ```
 
-Next, we used the open functional classification dataset from TxDOT to identify major arterials in the El Paso road network. An arterial is any road that has a “primary” or “major” functional status. The map below shows the distance of each road segment to its nearest major arterial. 
+Next, we used the open functional classification dataset from TxDOT to identify major arterials in the El Paso road network. An arterial is any road that has a `primary` or `major` functional status. The map below shows the distance of each road segment to its nearest major arterial. 
 
 ```{r add functional classification data, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 func_class <- st_read("Data/ElPaso_Func_Class/ElPaso_Func_Class.shp")%>%
@@ -1088,13 +1101,14 @@ ggplot() +
   mapTheme()
 ```
 
+
 ### 4.3.10. Spatial Relationship with Interstate-10
 
 As previously mentioned, our client shared that there has been historical disinvestment in marginalized communities that live below Interstate-10. We engineered a feature to identify whether a road segment is located below this highway or not. Because of the historic disinvestment, we anticipated that roads in these areas may be in worse conditions and have lower PCI scores. 
 
 ```{r import shp for interstate bound, message=FALSE, warning=FALSE}
-interstateBound <- st_read("Data/Interstate10Bound/Interstate10Bound.shp") %>%
-  st_transform('ESRI:102339')
+#interstateBound <- st_read("Data/Interstate10Bound/Interstate10Bound.shp") %>%
+#  st_transform('ESRI:102339')
 
 ggplot() +
   geom_sf(data=El_Paso_city, aes(), fill="white") +
@@ -1351,9 +1365,9 @@ _Note: After running the model, it was determined that the log transformation of
 
 # 5. Modeling
 
-After engineering our features, we split the 2016-2018 data into a train and test set. We input the train set into several machine learning models and use them to predict PCI. We compared these predictions to the actual PCI scores kept in the test set to evaluate how well each model performs. After selecting a model, we can hypertune the parameters to further improve its accuracy before applying it to 2019-2021 data. The following sections describe our process for the different models we evaluated and how we ultimately decided to use a Random Forest Regression model.
+After engineering our features, we split the 2016-2018 data into a train and test set. We put the train set into several machine learning models and used them to predict PCI. We compared these predictions to the actual PCI scores kept in the test set to evaluate how well each model performs. After selecting a model, we can hypertuned the parameters to further improve its accuracy before applying it to 2019-2021 data. The following sections describe our process for the different models we evaluated and how we ultimately decided to use a Random Forest Regression model.
 
-## 5.1 Train-Test Data Split
+## 5.1. Train-Test Data Split
 
 Before we start building the prediction models, we randomly split our existing dataset for 2016-2018 into a train set (70%) and a test set (30%).
 
@@ -1472,7 +1486,7 @@ This is an ensemble modeling technique that can be used for either regression or
 
 ### 5.3.1. Initial Random Forest Model
 
-We set up an initial random forest model with mostly default hyperparameters. The initial model returned a MAPE of 26.14%, which is the best model performance so far. Thus, we decide to do hyperparameter tuning on random forest algorithm to achieve better model accuracy.
+We set up an initial random forest model with mostly default hyperparameters. The initial model returned a MAPE of 26.14%, which is the best model performance so far. We decided to do hyperparameter tuning on the random forest algorithm to achieve even better model accuracy.
 
 ```{r set up initial random forest model, message=FALSE, warning=FALSE, results='hide'}
 rf_model_initial <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
@@ -1510,7 +1524,7 @@ rf_preds_acc_table
 
 Hyperparameters control how the random forest algorithm learns and how it behaves. Unlike the internal parameters that the algorithm automatically optimizes during model training, hyperparameters are model characteristics that we must set in advance.
 
-Finding the optimal hyperparameters configuration is challenging and there is no way of knowing the ideal hyperparameters in advance. It is, therefore, that finding an excellent model requires conducting several experiments with different parameters. To avoid the time-consuming manual hyperparameter tuning, we apply the grid search cross validation here with `GridSearchCV()`. `GridSearchCV()` uses a grid of predefined hyperparameters to test all possible permutations and return the model variant that leads to the best results. Here, we mainly test on the **mtry** hyperparameter. **mtry** is the number of variables randomly sampled as candidates at each split, and it is one of the most important hyperparameter for the random forest model that influence the model performance. After running `GridSearchCV()`, we get the optimal **mtry = 15**.
+Finding an excellent model requires conducting several experiments with different parameters. To avoid the time-consuming manual hyperparameter tuning, we apply the grid search cross validation here with `GridSearchCV()`. `GridSearchCV()` uses a grid of predefined hyperparameters to test all possible permutations and return the model variant that leads to the best results. Here, we mainly test on the **mtry** hyperparameter. **mtry** is the number of variables randomly sampled as candidates at each split, and it is one of the most important hyperparameter for the random forest model that influence the model performance. After running `GridSearchCV()`, we get the optimal **mtry = 15**.
 
 ```{r grid search mtry for RF model, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
@@ -1532,7 +1546,7 @@ rf_gridsearch
 
 ### 5.3.3. Tuned Random Forest Model
 
-We use the tuned hyperparameters in our initial random forest model to create our final random forest model. The tuned random forest model performed better than the initial model and has a MAPE of 25.31%, which is rather satisfactory. Additionally, we observed a lower Mean of Squared Residuals(MSE) and % Variance. These metrics are calculated using "Out of Bag" errors - in other words, the data points that are left out during the bootstrapping technique inherent to random forest models. These lowered values indicate that our model is generalizable and will perform well on new data.  
+We used the tuned hyperparameters in our initial random forest model to create our final random forest model, `rf_model`. This tuned random forest model performed better than the initial model with MAPE of 25.31%, which is rather satisfactory. Additionally, we observed a lower Mean of Squared Residuals (MSE) and % Variance. These metrics are calculated using "Out of Bag" errors - in other words, the data points that are left out during the bootstrapping technique inherent to random forest models. These lowered values indicate that our model is generalizable and will perform well on new data.  
 
 ```{r set up rf model1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 rf_model1 <- randomForest(PCI_2018 ~  crash_len + potholes_len + 
@@ -1578,7 +1592,7 @@ rf1_preds_acc_table
 
 ## 5.4. Support Vector Machine (SVM)
 
-**Support Vector Machine (SVM)** is another type of powerful supervised machine learning algorithm which is generally applied in classification and regression. Here we built up SVM models with the kernels `polynomial`, `radial`, and `sigmoid`. The best of three models returns MAPE of 47.13%, much lower than the random forest tuned model, so we decide not to work with SVM further.
+**Support Vector Machine (SVM)** is another type of supervised machine learning algorithm that is generally applied in classification and regression. Here we built up SVM models with the kernels `polynomial`, `radial`, and `sigmoid`. The best of three models returns MAPE of 47.13%, much lower than the random forest tuned model, so we decide not to work with SVM further.
 
 ```{r set up svm model 1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 svm_reg1 <- svm(PCI_2018 ~  crash_len + potholes_len + 
@@ -1683,11 +1697,12 @@ svm_acc_table <- kable(svm3_acc) %>%
 svm_acc_table
 ```
 
+
 ## 5.5. XGBoost
 
 **XGBoost** (eXtreme Gradient Boosting) is an efficient and scalable implementation of gradient boosting framework including linear model and tree learning algorithm. It supports various objective functions, including regression, classification, and ranking. Here we set up an XGBoost model for PCI regression.
 
-The tuned XGBoost model returns MAPE of 27.18%, similar to the Random Forest model performance. Thus, we decide to move forward with addiitonal tuning to these two algorithms.
+The tuned XGBoost model returns MAPE of 27.18%, similar to the Random Forest model performance.
 
 ```{r select features for xgb, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 xgb_train <-
@@ -1834,16 +1849,17 @@ for (j in 1:nrow(hyper_grid)) {
 
 ```
 
+
 ## 5.6. Model Results & Cross Validation
 
-After building and checking the model accuracy for the different regression algorithms, **we decide to go further with the tuned random forest model**. We carefully examined its model results and error distributions among categorical groups and numeric variables. 
+After building and checking the model accuracy for the different regression algorithms, **we decide to go forth with the tuned random forest model**. We carefully examined its model results and error distributions among categorical groups and numeric variables. 
 
 ### 5.6.1. Results for Random Forest
 
-```{r RF prediction vs real PCI, message=TRUE, warning=TRUE}
+```{r RF prediction vs real PCI, message=FALSE, warning=FALSE}
 ggplot(EP_model_rf1, aes(x=PCI_2018, y=rf_predict)) + 
   geom_point()+
-  geom_smooth(method=lm) +
+  geom_smooth(method = "lm", se=F, colour = "#3FB0C0") +
   labs(title = "Predicted PCI vs. Real PCI",
          y="Predicted PCI",
          x="Real PCI",
@@ -1852,8 +1868,6 @@ ggplot(EP_model_rf1, aes(x=PCI_2018, y=rf_predict)) +
 ```
 
 ```{r RF prediction result distribution, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-EP_model_rf1$pave_length <-
-  round(as.numeric(EP_model_rf1$pave_length), digits = -1)
   
 EP_model_rf1 %>%
 ggplot(aes(CLASS, rf_absError)) +
@@ -1911,9 +1925,12 @@ ggplot(aes(rf_absError, PLANAREA)) +
   plotTheme()
 ```
 
-This plot below shows the distribution of absolute error by length of each road segment. Errors are generally lower for shorter segments, hovering around 10% absolute error. Around the 500 ft mark, the distribution shows some spikes, indicating greater error variability for segments between 500 and 1000 feet. 
+The plot below shows the distribution of absolute error by length of each road segment. Errors are generally lower for shorter segments, hovering around 10% absolute error. Around the 500 feet mark, the distribution shows some spikes, indicating greater error variability for segments between 500 and 1000 feet. 
 
-```{r abs error and pavement plot, message=FALSE, warning=TRUE}
+```{r abs error and pavement plot, message=FALSE, warning=FALSE}
+EP_model_rf1$pave_length <-
+  round(as.numeric(EP_model_rf1$pave_length), digits = -1)
+
 EP_model_rf1 %>%
 ggplot(aes(pave_length, rf_absError)) +
   geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
@@ -1927,7 +1944,7 @@ ggplot(aes(pave_length, rf_absError)) +
 
 We looked to the distribution of absolute error across PCI values to see if the model predicts better for higher ratings versus lower, or other patterns that may be present in the data. The plot shows that higher absolute errors occur for road segments that have worse PCI scores - particularly below 25.
 
-```{r abs error and pci plot}
+```{r abs error and pci plot, message=FALSE, warning=FALSE}
 EP_model_rf1 %>%
 ggplot(aes(PCI_2018, rf_absError)) +
   geom_bar(position = "dodge", stat = "summary", fun = "mean", fill="#5192B0") +  
@@ -1950,7 +1967,7 @@ ggplot(EP_model_rf1, aes(x=rf_error)) +
   plotTheme()
 ```
 
-Zooming in on the raw errors for PCI scores from 25 to 55 (the very poor to poor range on the qualitative PCI scale), the errors are less than 25, which means that they are likely not changing categories on the qualitative scale. We interpret this further in the costs and benefits section below.
+Zooming in on the raw errors for PCI scores from 25 to 55 (the **very poor** to **poor** range on the qualitative PCI scale), the errors are less than 25, which means that they are likely not changing categories on the qualitative scale. We interpret this further in the costs and benefits section below.
 
 ```{r RF result distribution 2}
 ggplot(EP_model_rf1 %>% subset(PCI_2018<55 & PCI_2018>25), aes(x=rf_error)) + 
@@ -1962,7 +1979,7 @@ ggplot(EP_model_rf1 %>% subset(PCI_2018<55 & PCI_2018>25), aes(x=rf_error)) +
   plotTheme()
 ```
 
-To visualize the same errors over space, we summarized the predictions by census tract. We can see a clear pattern that census tracts with high absolute errors are mostly located in the area below interstate 10, a highway that cuts through the city. This shows that there is a sense of spatial inequity in our model accuracy and that we need to be cautious.
+To visualize the same errors over space, we summarized the predictions by census tract. We can see a clear pattern that census tracts with high absolute errors are mostly located in the area below interstate-10, a highway that cuts through the city. This shows that there is a sense of spatial inequity in our model accuracy and that we need to be cautious.
 
 In fact, our client informed us that there has been historic disinvestment in neighborhoods south of this highway. This can lead to poor data collection or biased data collection which may be the root of these higher errors here.
 
@@ -2027,18 +2044,22 @@ ggplot()+
 
 Our model is not perfect. so it is important we consider the trade-offs of over- and under-predicting PCI scores and what this means for the El Paso Capital Improvements Department.
 
-- **Over-predictions**: When a score is over predicted, that means the model predicts the road conditions will be better than they actually are. This means that some roads that need repairs will not make the list of projects in the Capital Improvements Department, but the department will have a shorter list of projects which saves them time and resources
+- **Over-predictions**: When a score is over-predicted, that means the model predicts the road conditions will be better than they actually are. This means that some roads that need repairs will not make the list of projects in the Capital Improvements Department, but the department will have a shorter list of projects which saves them time and resources.
 
-- **Under-predictions**: When a score is under predicted, that means the model predicts the road conditions will be worse than they actually are. This may create a longer list of road improvement projects for the department, but more roads get attended to earlier on, which can save the department money in the long run. As such, we think under predicting scores is better.
+- **Under-predictions**: When a score is under-predicted, that means the model predicts the road conditions will be worse than they actually are. This may create a longer list of road improvement projects for the department, but more roads get attended to earlier on, which can save the department money in the long run. As such, we think under-predicting scores is better.
 
 All things considered, it is important to remember that large errors (of 15 or more) are the only ones that would really change the road’s rating - as shown by the rating scale below. Based on the histogram of errors shown earlier, we have very few of these so roads are not being misclassified that dramatically.
 
+```{r echo=TRUE}
+knitr::include_graphics("Images/PCI-ratingscale.jpg")
+
+```
 
 ## 5.7. Ensemble Modeling with Random Forest
 
-**Ensemble modeling** is a process where multiple models are created to predict an outcome. One of the measures for applying ensemble modeling is using many different sub-models. The ensemble model can then aggregate the prediction of each sub-model and results in once final prediction for the unseen data. The motivation for using ensemble model is to reduce the generalization error of the prediction.
+**Ensemble modeling** is a process where multiple models are created to predict an outcome. One of the measures for applying ensemble modeling is using many different sub-models. The ensemble model can then aggregate the prediction of each sub-model and results in one final prediction for the unseen data. The motivation for using ensemble model is to reduce the generalization error of the prediction.
 
-As mentioned before, we classify our features into three categories - **road conditions**, **environment**, and **road network** - and we decide to use the same criterion to build up sub-models.
+As mentioned before, we classified our features into three categories - **road conditions**, **environment**, and **road network** - so we decided to use the same criterion to build up sub-models.
 
 ```{r ensemble model 1 --  environment, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 rf_enmodel1 <- randomForest(PCI_2018 ~  car_facility_nn3 + entertainment_nn3 + food_drink_nn3 + 
@@ -2193,7 +2214,7 @@ enmodel_preds_acc_table <- kable(enmodel_preds_acc, caption="Random Forest Ensem
 enmodel_preds_acc_table
 ```
 
-However, the ensemble model doesn't perform as we expected actually. The performance of the ensemble model is worse than our initial random forest model 1. Thus, we decide to continue with our initial model.
+However, the ensemble model does not perform as well as we had hoped. The performance of the ensemble model is worse than our initial random forest model 1. Thus, we decide to continue with our tuned random forest model based on the results in section 5.6.
 
 ```{r Ensemble modeling results, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # let's exclude these submodel plots
@@ -2240,7 +2261,7 @@ ggplot(aes(PCI_2018, rf_absError)) +
 
 # 6. Predictions
 
-Based on the model training and testing attempts above, we made PCI predictions with *Random Forest Model 1*, which is built up in section 5.3.1. In this part, we aimed to get the PCI for 2021 as output of the random forest regression model.
+Based on the model training and testing attempts above, we made PCI predictions with *Random Forest Model 1* (`rf_model1`), which is built up in section 5.3.1. In this part, we aimed to get the PCI for 2021 as output of the random forest regression model.
 
 ## 6.1. Overall Predictions for PCI 2021
 
@@ -2258,28 +2279,35 @@ mapview::mapview(EP_model_predictions_2021, zcol="predictions", color = c("#DEF5
 ```
 
 
-## 6.1.2. Zooming into Specific Areas
+## 6.2. Zooming into Specific Areas
 
 For example, we can tell that most of the road segments in Las Tierras neighborhood in the north east corner of the city are of pretty good conditions. On the other hand, some road segments in the downtown area might need refinement.
 
-_ADD VERSION OF PRESENTATION SLIDE_
+```{r echo=TRUE}
+knitr::include_graphics("Images/PredictionsStreets.jpg")
+
+```
 
 We can see that the pavement on segments of Sombra Grande Drive and Sundale Drive are smooth and flat and in seemingly good condition - as we predicted. In the contrast, we can easily spot the potholes and cracks on the road surface of segments of Pikes Peak Drive and Rosinante Road,  which indicates that these road segments are in need of some repair. These conditions align with our predictions which shows the power our model to create a more proactive decision-making process.
 
-_ADD VERSION OF PRESENTATION SLIDE_
+```{r echo=TRUE}
+knitr::include_graphics("Images/PredictionsGoogleMaps.jpg")
+```
 
+# 7. Application: El Paso Road Viewer
 
-# 7. Web Application: El Paso Road Viewer
+After finalizing our predictive model, we can load the 2021 PCI predictions in our web application, the [El Paso Road Viewer (EPRV)](https://jennaepstein.github.io/El_Paso_Road_Viewer/). This tool will help our client decide where and how to allocate capital improvement funds for road repairs using more than just PCI. The city sent out a community survey where they learned that residents most value equity, safety, traffic congestion, and flood risk when thinking about how to improve their city’s road infrastructure. Using the capital improvement department’s equity hexbin layer as a guide, we created three additional layers to represent each of these values. 
 
-After finalizing our predictive model, we can load the 2021 PCI predictions in our web application, the El Paso Road Viewer (EPRV).  This tool will help our client decide where and how to allocate capital improvement funds for road repairs using more than just PCI. The city sent out a community survey where they learned that residents most value equity, safety, traffic congestion, and flood risk when thinking about how to improve their city’s road infrastructure. Using the capital improvement department’s equity hexbin layer as a guide, we created three additional layers to represent each of these values. 
-
-_TO DO - Add screenshot(s) of the app_
+```{r echo=TRUE}
+knitr::include_graphics("Images/EPRV_webapp_screenshot.png")
+```
 
 Road segments with their 2021 PCI scores are overlaid on one of the four layers to offer a quick analysis of which roads need repairs under the corresponding layer context. EPRV users can filter the number of road segments included in the map view using a PCI score slider, which displays all of the road segments at or below the score shown.  Once the view is set, a search bar is available for people to look up their street name or a landmark to find roads near them. Additionally, users can click on a specific road to view more details including the street name, PCI score, road class, plan area, and city district. 
 
 With these functions, the EPRV helps increase transparency, provides quick analysis, and takes the decision making process beyond just PCI.
 
 # 8. Conclusion
+
 The El Paso Road Viewer is a powerful tool that can create a more proactive decision-making process for the Capital Improvements Department. By using machine learning to predict future PCI scores, the city can conduct scenario planning based on forecasted futures. Additionally, resource allocation decisions can be made more equitably and are data-driven with the community’s priorities in mind. We look forward to seeing how the EPRV, powered by the predictive model, can be a useful tool for holistic road-related planning in El Paso.
 
 
